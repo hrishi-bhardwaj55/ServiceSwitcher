@@ -1,0 +1,15 @@
+# Data workspace
+
+All account data in ServicerSwitch is synthetic. The directories in this workspace
+are populated incrementally by the build chunks:
+
+- `generator/`: internally consistent mortgage account generation (C2)
+- `faults/`: one deterministic fault injector per finding type (C3)
+- `render/`: PDF template families and renderers (C6)
+- `accounts/`: generated canonical account JSON
+- `documents/`: generated PDF document sets
+- `ground_truth/`: machine-readable expected findings
+- `traces/`: server-side investigator trajectories
+
+Generated records, PDFs, labels, and traces are ignored by Git unless a later chunk
+explicitly promotes a small fixture into version control.

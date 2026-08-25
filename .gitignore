@@ -1,0 +1,33 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Java
+apps/engine/target/
+
+# Node.js / Next.js
+apps/web/node_modules/
+apps/web/.next/
+apps/web/coverage/
+apps/web/*.tsbuildinfo
+
+# Generated runtime data
+data/accounts/*.json
+data/documents/**/*.pdf
+data/ground_truth/*.jsonl
+data/traces/*.jsonl
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

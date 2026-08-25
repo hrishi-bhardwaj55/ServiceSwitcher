@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "servicerswitch-ai"
+version = "0.1.0"
+description = "Document extraction and investigation service for ServicerSwitch"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  "alembic>=1.16,<2",
+  "fastapi==0.141.1",
+  "psycopg[binary]>=3.2,<4",
+  "sqlalchemy>=2.0,<3",
+  "uvicorn[standard]>=0.35,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx2>=2.12,<3",
+  "pytest>=8.4,<10",
+  "pytest-cov>=6.2,<8",
+  "ruff>=0.12,<1",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
