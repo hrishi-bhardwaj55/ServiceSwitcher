@@ -18,6 +18,7 @@ apps/engine/target/
 apps/web/node_modules/
 apps/web/.next/
 apps/web/coverage/
+apps/web/*.tsbuildinfo
 
 # Generated runtime data
 data/accounts/*.json
