@@ -11,7 +11,7 @@ from typing import cast
 
 from app.extraction import DocumentType as ExtractionDocumentType
 from app.extraction.fallback import HybridExtractionResult, extract_with_fallback
-from app.llm import LLMClient, OpenAIResponsesClient
+from app.llm import CachedLLMClient, LLMClient, OpenAIResponsesClient
 
 from data.render.content import DOCUMENT_TYPES, TemplateFamily, family_for_account
 from data.render.ground_truth import (
@@ -60,10 +60,14 @@ def _ratio(numerator: int, denominator: int) -> Decimal:
 
 
 def evaluate(
-    accounts: list[dict], documents: Path, client: LLMClient
+    accounts: list[dict],
+    documents: Path,
+    client: LLMClient,
+    *,
+    show_progress: bool = False,
 ) -> dict[str, CohortMetrics]:
     metrics = {IN_DISTRIBUTION: CohortMetrics(), HELD_OUT: CohortMetrics()}
-    for account in accounts:
+    for account_number, account in enumerate(accounts, start=1):
         family = family_for_account(account["account_id"])
         cohort_name = HELD_OUT if family == TemplateFamily.C else IN_DISTRIBUTION
         cohort = metrics[cohort_name]
@@ -83,6 +87,8 @@ def evaluate(
                 expected_values,
                 expected_pages,
             )
+        if show_progress and (account_number % 10 == 0 or account_number == len(accounts)):
+            print(f"Evaluated {account_number}/{len(accounts)} accounts", flush=True)
     return metrics
 
 
@@ -180,6 +186,11 @@ def _parse_args() -> argparse.Namespace:
         type=Path,
         default=Path("evals/reports/calibration.md"),
     )
+    parser.add_argument(
+        "--cache",
+        type=Path,
+        default=Path("data/traces/extraction_llm_cache.jsonl"),
+    )
     parser.add_argument("--expected-count", type=int, default=EXPECTED_ACCOUNT_COUNT)
     return parser.parse_args()
 
@@ -189,8 +200,13 @@ def main() -> None:
     accounts = load_accounts(args.accounts)
     if len(accounts) != args.expected_count:
         raise ValueError(f"expected {args.expected_count} accounts; found {len(accounts)}")
-    client = OpenAIResponsesClient.from_env()
-    metrics = evaluate(accounts, args.documents, client)
+    provider = OpenAIResponsesClient.from_env()
+    client = CachedLLMClient(
+        provider,
+        args.cache,
+        namespace=f"{provider.api_base}|{provider.model}|c8-provider-v2",
+    )
+    metrics = evaluate(accounts, args.documents, client, show_progress=True)
     model = os.environ["LLM_MODEL"]
     report = render_report(metrics, model)
     calibration = render_calibration(metrics, model)
@@ -198,6 +214,7 @@ def main() -> None:
     args.report.write_text(report, encoding="utf-8")
     args.calibration_report.write_text(calibration, encoding="utf-8")
     print(report)
+    print(f"Provider cache: {client.hits} hits, {client.misses} misses")
     print(f"Wrote reports to {args.report} and {args.calibration_report}")
 
 

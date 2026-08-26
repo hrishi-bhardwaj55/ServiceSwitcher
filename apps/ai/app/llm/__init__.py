@@ -1,5 +1,6 @@
 """Provider-neutral LLM clients for structured extraction."""
 
+from app.llm.cache import CachedLLMClient
 from app.llm.fake import DeterministicFakeLLM
 from app.llm.models import (
     LLMExtractionRequest,
@@ -11,6 +12,7 @@ from app.llm.openai_responses import OpenAIResponsesClient
 from app.llm.protocol import LLMClient
 
 __all__ = [
+    "CachedLLMClient",
     "DeterministicFakeLLM",
     "LLMClient",
     "LLMExtractionRequest",

@@ -122,3 +122,50 @@ def test_openai_client_redacts_credentials_from_transport_failures():
     assert api_key not in str(raised.value)
     assert "[REDACTED]" in str(raised.value)
     assert raised.value.__context__ is None
+
+
+def test_openai_client_retries_semantically_invalid_structured_output():
+    attempts = 0
+    duplicate = {
+        "document_type": "PROPERTY_TAX_BILL",
+        "classification_confidence": 0.95,
+        "fields": [
+            {
+                "field_name": "annual_tax_amount",
+                "raw_value": "$3,200.00",
+                "page": 1,
+                "confidence": 0.95,
+            },
+            {
+                "field_name": "annual_tax_amount",
+                "raw_value": "$3,200.00",
+                "page": 1,
+                "confidence": 0.95,
+            },
+        ],
+    }
+    valid = duplicate | {"fields": duplicate["fields"][:1]}
+
+    def transport(url, headers, payload, timeout):
+        nonlocal attempts
+        attempts += 1
+        output = duplicate if attempts == 1 else valid
+        return {"output_text": json.dumps(output)}
+
+    client = OpenAIResponsesClient(
+        api_key="test-key",
+        model="test-model",
+        response_attempts=2,
+        transport=transport,
+    )
+
+    result = client.extract(
+        LLMExtractionRequest(
+            document_type="PROPERTY_TAX_BILL",
+            requested_fields=["annual_tax_amount"],
+            pages=[LLMPage(page=1, text="Annual Amount Due $3,200.00")],
+        )
+    )
+
+    assert attempts == 2
+    assert len(result.fields) == 1
