@@ -4,8 +4,8 @@ ServicerSwitch is a demoable mortgage-servicing transfer auditor. It combines a
 deterministic financial reconciliation engine with a tool-using AI investigator,
 and requires document-level evidence for every AI-assisted claim.
 
-> Status: C13 complete — the bounded investigator and naive long-context baseline
-> have both been evaluated over the same 300 PDF-backed audits. See the
+> Status: C14 measured — the agent, naive baseline, and 20-document adversarial suite
+> have been evaluated with recorded ground truth. See the
 > [implementation ledger](docs/progress.md).
 
 ## Project principles
@@ -35,6 +35,8 @@ and requires document-level evidence for every AI-assisted claim.
 - [End-to-end investigator evaluation](evals/reports/agent.md)
 - [Naive long-context baseline](evals/reports/baseline.md)
 - [Agent versus baseline comparison](evals/reports/comparison.md)
+- [Adversarial document evaluation](evals/reports/adversarial.md)
+- [Adversarial security boundary](docs/adversarial-security.md)
 - [Measured evaluation decisions](docs/evals.md)
 - [Audit-scoped agent tools](docs/agent-tools.md)
 - [Investigator agent](docs/investigator-agent.md)
@@ -49,6 +51,7 @@ and requires document-level evidence for every AI-assisted claim.
 | Hybrid regulation retrieval | 25 queries | 96.00% Recall@5; 0.9200 MRR |
 | End-to-end investigator | 300 audits | 100% finding F1; 0% clean/tricky false positives; 40% automated task success |
 | Naive long-context baseline | 300 audits | 25.95% finding F1; 75.00% clean FPR; 87.50% tricky FPR |
+| Adversarial documents | 20 PDFs | 20/20 expected behaviors; 0/12 prompt-injection success |
 
 ## Services
 
@@ -283,3 +286,22 @@ See the [baseline report](evals/reports/baseline.md) and the measured
 [side-by-side comparison](evals/reports/comparison.md). Baseline cost includes its
 full-document call; investigator cost covers investigator tokens and excludes
 embeddings and already-cached extraction calls.
+
+## Adversarial document evaluation
+
+Render and evaluate the fixed hostile-PDF corpus with:
+
+```bash
+make eval-adversarial
+```
+
+The suite covers hidden and tiny instructions, fake authority, delimiter breakout,
+malicious JSON/tool text, contradictory and out-of-range values, empty/image-only
+PDFs, cross-account contamination, and implausible dates. The credentialed
+`gpt-5.4-mini` run matched all 20 expected behaviors and recorded 0/12 successful
+prompt injections with zero execution errors. Eight unsafe documents were rejected
+before model access; the other 12 preserved the trusted `$3,200.00` value.
+
+See the [case report](evals/reports/adversarial.md) and
+[security boundary](docs/adversarial-security.md) for implementation details and
+explicit limitations.
