@@ -4,7 +4,8 @@ import pytest
 
 from app.embeddings import DeterministicFakeEmbeddingClient
 from app.retrieval import load_corpus
-from app.retrieval.ingest import DATABASE_DIMENSIONS, embedding_text, vector_literal
+from app.retrieval.database import DATABASE_DIMENSIONS, vector_literal
+from app.retrieval.ingest import embedding_text
 
 CORPUS = Path(__file__).parents[4] / "knowledge-base" / "chunks.jsonl"
 
@@ -27,6 +28,9 @@ def test_vector_literal_requires_database_dimensions():
     assert rendered.startswith("[")
     assert rendered.endswith("]")
     assert rendered.count(",") == DATABASE_DIMENSIONS - 1
+
+    with pytest.raises(ValueError, match="finite"):
+        vector_literal([float("nan")] * DATABASE_DIMENSIONS)
 
 
 def test_fake_embedding_client_is_strict_and_deterministic():

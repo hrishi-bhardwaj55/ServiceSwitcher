@@ -8,7 +8,7 @@ from pydantic import Field
 from sqlalchemy import Engine, text
 
 from app.embeddings import EmbeddingClient
-from app.retrieval.ingest import vector_literal
+from app.retrieval.database import vector_literal
 from app.retrieval.models import RuleChunk
 from app.schemas.mortgage import CanonicalModel
 

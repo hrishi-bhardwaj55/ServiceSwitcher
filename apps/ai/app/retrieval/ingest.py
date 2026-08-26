@@ -9,22 +9,12 @@ from sqlalchemy import Engine, text
 
 from app.embeddings import EmbeddingClient, OpenAIEmbeddingClient
 from app.retrieval.corpus import load_corpus
-from app.retrieval.database import database_engine
+from app.retrieval.database import DATABASE_DIMENSIONS, database_engine, vector_literal
 from app.retrieval.models import RuleChunk
-
-DATABASE_DIMENSIONS = 512
 
 
 def embedding_text(chunk: RuleChunk) -> str:
     return f"{chunk.title}\n{chunk.section}\n{chunk.content}"
-
-
-def vector_literal(vector: list[float]) -> str:
-    if len(vector) != DATABASE_DIMENSIONS:
-        raise ValueError(
-            f"expected {DATABASE_DIMENSIONS} embedding dimensions; found {len(vector)}"
-        )
-    return "[" + ",".join(format(value, ".9g") for value in vector) + "]"
 
 
 def ingest_chunks(chunks: list[RuleChunk], client: EmbeddingClient, engine: Engine) -> int:
