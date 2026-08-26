@@ -12,7 +12,8 @@ is merged to `main`.
 | C3 — fault injection and ground truth | Complete | 200 single-fault, 60 clean, and 40 clean-but-tricky cases validate 300/300; tag `c3-done` |
 | C4 — deterministic reconciliation engine | Complete | Five detectors, explicit explained outcome, tolerance boundary tests, and HTTP contract pass; tag `c4-done` |
 | C5 — first eval number | Complete | 100% precision/recall/F1, 0/100 clean false positives, and $0.0000 impact MAE across 300 HTTP reconciliations; tag `c5-done` |
-| C6–C16 | Not started | Mandatory chunk order preserved |
+| C6 — document rendering | Complete | 1,500/1,500 PDFs pass page-count and extractable-value validation; exact A/B/C split is 120/120/60; tag `c6-done` |
+| C7–C16 | Not started | Mandatory chunk order preserved |
 
 ## Durable decisions
 
@@ -49,3 +50,11 @@ is merged to `main`.
   finding differences.
 - `make eval-engine` owns an isolated engine process on an available loopback port,
   so evaluation does not depend on a manually started service or a fixed port.
+- Template assignment cycles over every five account identifiers instead of using
+  contiguous ranges. The exact 40%/40%/20% distribution therefore remains balanced
+  across fault types and clean-case buckets.
+- Family C is structurally held out: detail precedes summary, every document has two
+  pages, values sit above labels, dates are abbreviated, and source scanning rejects
+  any Family C reference under `apps/ai/`.
+- PDF validation combines pypdf page/text checks across all 1,500 artifacts with
+  Poppler-rendered visual inspection of representative documents from each family.
