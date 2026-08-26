@@ -1,0 +1,25 @@
+{"case_id":"rag-001","query":"What is the maximum escrow cushion a servicer can keep?","required_sources":["regx-17-aggregate-required"]}
+{"case_id":"rag-002","query":"How is the regular monthly escrow collection calculated from annual bills?","required_sources":["regx-17-monthly-payment-limit"]}
+{"case_id":"rag-003","query":"Which amount must be used when next year's property tax bill is already known?","required_sources":["regx-17-disbursement-estimates"]}
+{"case_id":"rag-004","query":"When must a current borrower receive a $50 escrow surplus refund?","required_sources":["regx-17-surplus-refund"]}
+{"case_id":"rag-005","query":"What repayment options apply when an escrow shortage is smaller than one monthly escrow payment?","required_sources":["regx-17-small-shortage"]}
+{"case_id":"rag-006","query":"Can a servicer demand a large escrow shortage in one payment within 30 days?","required_sources":["regx-17-large-shortage"]}
+{"case_id":"rag-007","query":"What history and projections belong in the annual escrow statement?","required_sources":["regx-17-annual-statement"]}
+{"case_id":"rag-008","query":"How soon must the old servicer send the escrow short-year statement after transfer?","required_sources":["regx-17-transfer-short-year"]}
+{"case_id":"rag-009","query":"Must the servicer advance funds to pay an escrow bill before a penalty deadline?","required_sources":["regx-17-timely-disbursement"]}
+{"case_id":"rag-010","query":"When should property taxes be paid in installments instead of one annual payment?","required_sources":["regx-17-tax-installments"]}
+{"case_id":"rag-011","query":"When do the old and new servicers normally send transfer notices?","required_sources":["regx-33-notice-timing"]}
+{"case_id":"rag-012","query":"What exceptional events allow a servicing transfer notice up to 30 days after transfer?","required_sources":["regx-33-extended-notice"]}
+{"case_id":"rag-013","query":"Must a transfer notice state when each servicer stops and starts accepting payments?","required_sources":["regx-33-notice-contacts"]}
+{"case_id":"rag-014","query":"Does selling mortgage servicing rights change the interest rate or other loan terms?","required_sources":["regx-33-terms-unaffected"]}
+{"case_id":"rag-015","query":"Can a borrower be charged a late fee for sending an on-time payment to the old servicer during the first 60 days?","required_sources":["regx-33-sixty-day-protection"]}
+{"case_id":"rag-016","query":"What must the prior servicer do with a payment it receives by mistake after transfer?","required_sources":["regx-33-misdirected-payment"]}
+{"case_id":"rag-017","query":"What loan records must a transferor deliver so the transferee can comply with applicable law?","required_sources":["regx-38-transferor-information"]}
+{"case_id":"rag-018","query":"What policies help ensure electronic servicing data boards correctly into the new system?","required_sources":["regx-38-electronic-boarding"]}
+{"case_id":"rag-019","query":"Should a new servicer ask the borrower or the old servicer first for a missing modification agreement?","required_sources":["regx-38-transferee-missing-docs"]}
+{"case_id":"rag-020","query":"Does the servicing file include a schedule of escrow account credits and debits?","required_sources":["regx-38-servicing-file"]}
+{"case_id":"rag-021","query":"What pre-transfer controls test field mapping and platform compatibility before boarding?","required_sources":["cfpb-2014-transfer-planning"]}
+{"case_id":"rag-022","query":"How should a transferee validate inbound data and resolve loan-level errors after boarding?","required_sources":["cfpb-2014-post-transfer-validation"]}
+{"case_id":"rag-023","query":"How should loans with pending loss mitigation applications and trial modifications be identified during transfer?","required_sources":["cfpb-2014-loss-mitigation-flags"]}
+{"case_id":"rag-024","query":"Do borrower error notices and requests for information still have to be answered after servicing transfers?","required_sources":["cfpb-2014-errors-and-requests"]}
+{"case_id":"rag-025","query":"What should a written consumer-risk plan for a significant servicing transfer describe?","required_sources":["cfpb-2014-transfer-plan"]}

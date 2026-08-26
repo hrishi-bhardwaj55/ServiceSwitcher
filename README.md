@@ -4,9 +4,8 @@ ServicerSwitch is a demoable mortgage-servicing transfer auditor. It combines a
 deterministic financial reconciliation engine with a tool-using AI investigator,
 and requires document-level evidence for every AI-assisted claim.
 
-> Status: C8 complete — confidence-gated model fallback preserves 100% A/B field
-> accuracy and measures 93.04% exact fields plus 78.14% page citations on the
-> held-out layout. See the
+> Status: C9 complete — the 47-chunk regulation knowledge base is live in pgvector,
+> and hybrid retrieval was selected from a 25-query side-by-side evaluation. See the
 > [implementation ledger](docs/progress.md).
 
 ## Project principles
@@ -31,6 +30,9 @@ and requires document-level evidence for every AI-assisted claim.
 - [Model-backed extraction fallback](docs/llm-extraction-fallback.md)
 - [Model-backed extraction evaluation](evals/reports/extraction.md)
 - [Extraction confidence calibration](evals/reports/calibration.md)
+- [Regulation knowledge base](knowledge-base/README.md)
+- [Retrieval evaluation](evals/reports/rag.md)
+- [Measured evaluation decisions](docs/evals.md)
 - [Implementation progress](docs/progress.md)
 
 ## Services
@@ -164,3 +166,22 @@ fields and pages without fallback; held-out Family C scores 93.04% exact fields 
 78.14% page citations with fallback on every document. See the
 [evaluation report](evals/reports/extraction.md) and
 [calibration report](evals/reports/calibration.md).
+
+## Regulation retrieval
+
+The knowledge base contains 47 curated chunks from the primary Regulation X and
+CFPB servicing-transfer sources. Ingest them into PostgreSQL with pgvector and run
+the 25-query comparison:
+
+```bash
+make ingest-kb
+make eval-rag
+```
+
+The embedding client uses `text-embedding-3-small` at 512 dimensions. Set
+`EMBEDDING_API_KEY` or reuse the existing `LLM_API_KEY`; local Python commands read
+credentials from the process environment, while Docker Compose reads `.env`.
+Vector-only and hybrid retrieval both reached 96.00% Recall@5. Hybrid is the
+production choice because its 0.9200 MRR exceeded vector-only's 0.9000 without
+reducing coverage. Full interpretation and limitations are in
+[the evaluation decision](docs/evals.md).
