@@ -102,8 +102,6 @@ def extract_with_fallback(
         if name not in deterministic_fields
         or deterministic_fields[name].confidence < field_threshold
     )
-    if needs_classification and not requested:
-        requested = expected_names
 
     llm_response = None
     if needs_classification or requested:
@@ -121,6 +119,10 @@ def extract_with_fallback(
         classification_source,
         classification_review,
     ) = _resolve_classification(deterministic, llm_response)
+    classification_review = (
+        classification_review
+        or classification_confidence < classification_threshold
+    )
     valid_names = tuple(rule.field_name for rule in FIELD_RULES[document_type])
     llm_fields, rejected = _normalize_llm_fields(
         llm_response.fields if llm_response else [],
@@ -268,6 +270,7 @@ def _resolve_field(
             confidence=candidate.confidence,
             source="LLM",
             source_text=candidate.raw_value,
+            requires_review=candidate.confidence < threshold,
         )
     if deterministic is None or llm is None:
         return None

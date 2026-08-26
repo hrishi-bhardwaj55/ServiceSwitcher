@@ -15,7 +15,7 @@ class LLMPage(CanonicalModel):
 
 class LLMExtractionRequest(CanonicalModel):
     document_type: DocumentType | None = None
-    requested_fields: list[FieldName] = Field(min_length=1)
+    requested_fields: list[FieldName]
     pages: list[LLMPage] = Field(min_length=1)
 
     @model_validator(mode="after")

@@ -85,7 +85,7 @@ class OpenAIResponsesClient:
 
 def _user_input(request: LLMExtractionRequest) -> str:
     expected_type = request.document_type or "unknown; classify it"
-    fields = ", ".join(request.requested_fields)
+    fields = ", ".join(request.requested_fields) or "none; classify only"
     pages = "\n".join(
         f"--- PAGE {page.page} ---\n{page.text}" for page in request.pages
     )

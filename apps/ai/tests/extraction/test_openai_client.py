@@ -64,3 +64,34 @@ def test_openai_client_uses_structured_output_and_untrusted_delimiters():
     assert output_format["strict"] is True
     assert json.dumps(output_format["schema"])
     assert "<UNTRUSTED_DOCUMENT_TEXT>" in captured["payload"]["input"]
+
+
+def test_openai_client_supports_classification_only_requests():
+    captured = {}
+
+    def transport(url, headers, payload, timeout):
+        captured.update(payload=payload)
+        return {
+            "output_text": LLMExtractionResponse(
+                document_type="TRANSFER_NOTICE",
+                classification_confidence=0.55,
+                fields=[],
+            ).model_dump_json()
+        }
+
+    client = OpenAIResponsesClient(
+        api_key="test-key",
+        model="test-model",
+        transport=transport,
+    )
+
+    result = client.extract(
+        LLMExtractionRequest(
+            document_type="TRANSFER_NOTICE",
+            requested_fields=[],
+            pages=[LLMPage(page=1, text="Servicing transfer notice")],
+        )
+    )
+
+    assert result.fields == []
+    assert "Requested fields: none; classify only" in captured["payload"]["input"]
