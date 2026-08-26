@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: up down verify lint-ai test-engine test-ai test-extraction test-retrieval test-data test-faults test-render test-evals test-web generate-accounts validate-accounts inject-faults validate-ground-truth eval-engine render-documents validate-documents check-heldout-isolation eval-extraction-deterministic eval-extraction db-migrate ingest-kb
+.PHONY: up down verify lint-ai test-engine test-ai test-extraction test-retrieval test-data test-faults test-render test-evals test-web generate-accounts validate-accounts inject-faults validate-ground-truth eval-engine render-documents validate-documents check-heldout-isolation eval-extraction-deterministic eval-extraction db-migrate ingest-kb eval-rag
 
 up:
 	docker compose up --build -d
@@ -31,6 +31,9 @@ db-migrate:
 
 ingest-kb: db-migrate test-retrieval
 	$(PYTHON) -m app.retrieval.ingest --corpus knowledge-base/chunks.jsonl
+
+eval-rag: ingest-kb test-evals
+	$(PYTHON) -m evals.runners.rag_eval
 
 generate-accounts:
 	$(PYTHON) -m data.generator.generate --output data/accounts --count 300 --seed 20250825
