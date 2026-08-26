@@ -20,7 +20,7 @@ is merged to `main`.
 | C11 — investigator agent | Complete | Exact LangGraph pipeline, one agentic node, 12-call/$0.25 fail-closed budgets, JSONL trajectories, HITL checkpoint resume, and live CASE-0042 finding preserved; tag `c11-done` |
 | C12 — agent evaluation | Complete | 300/300 exact finding sets, 0/100 clean false positives, 40.00% automated success, 55.00% faulted-case tool accuracy, 13/13 tool-error recovery, and zero model errors; tag `c12-done` |
 | C13 — naive baseline | Complete | 300/300 one-call cases without execution failures: 25.95% F1, 16.67% exact-set success, 75.00% clean FPR, and 87.50% tricky FPR; tag `c13-done` |
-| C14 — adversarial suite | In progress | 20/20 recorded behaviors passed; 8/8 unsafe documents rejected pre-model; 0/12 prompt-injection success; zero execution errors |
+| C14 — adversarial suite | Complete | 20/20 recorded behaviors passed; 8/8 unsafe documents rejected pre-model; 0/12 prompt-injection success; zero execution errors; tag `c14-done` |
 | C15–C16 | Not started | Mandatory chunk order preserved |
 
 ## Durable decisions
