@@ -4,8 +4,8 @@ ServicerSwitch is a demoable mortgage-servicing transfer auditor. It combines a
 deterministic financial reconciliation engine with a tool-using AI investigator,
 and requires document-level evidence for every AI-assisted claim.
 
-> Status: C14 complete — the agent, naive baseline, and 20-document adversarial suite
-> have been evaluated with recorded ground truth. See the
+> Status: C15 complete — the evaluated system is available as a four-screen,
+> evidence-first browser demo with a tested phone layout. See the
 > [implementation ledger](docs/progress.md).
 
 ## Project principles
@@ -37,6 +37,7 @@ and requires document-level evidence for every AI-assisted claim.
 - [Agent versus baseline comparison](evals/reports/comparison.md)
 - [Adversarial document evaluation](evals/reports/adversarial.md)
 - [Adversarial security boundary](docs/adversarial-security.md)
+- [Web demo and evidence viewer](docs/web-demo.md)
 - [Measured evaluation decisions](docs/evals.md)
 - [Audit-scoped agent tools](docs/agent-tools.md)
 - [Investigator agent](docs/investigator-agent.md)
@@ -98,6 +99,27 @@ make verify
 On Windows PowerShell, activate with `.\.venv\Scripts\Activate.ps1` and run
 `make PYTHON=.venv/Scripts/python.exe verify` when GNU Make is available. The same
 verification gate runs on every push and pull request.
+
+The web gate includes TypeScript checking, component tests, a production build,
+and a Playwright walkthrough. Install its Chromium runtime once on a new machine:
+
+```bash
+npx --prefix apps/web playwright install chromium
+```
+
+## Evidence-first web demo
+
+Run only the browser interface while developing:
+
+```bash
+npm --prefix apps/web run dev
+```
+
+Open `http://localhost:3000`, choose **Tax projection error**, and start the audit.
+The flow shows seven bounded processing stages, a deterministic payment
+decomposition, and the finding's value highlighted on the rendered source PDF.
+The action draft is editable and is never sent automatically. See the
+[web demo guide](docs/web-demo.md) for the screen contract and privacy boundary.
 
 ## Synthetic accounts
 
