@@ -28,10 +28,10 @@ def _finding(finding_type="ESCROW_BALANCE_MISMATCH"):
         "finding_type": finding_type,
         "severity": "LOW",
         "confidence": 0.9,
-        "actual_value": "1200.00",
-        "servicer_value": "1300.00",
-        "difference": "100.00",
-        "monthly_impact": "0.00",
+        "actual_value": 1200.00,
+        "servicer_value": 1300.00,
+        "difference": 100.00,
+        "monthly_impact": 0.00,
         "explanation": "The opening balance differs from the prior closing balance.",
         "evidence": [
             {
@@ -113,6 +113,10 @@ def test_openai_baseline_is_one_structured_call_without_tools():
     schema = payload["text"]["format"]["schema"]
     finding_schema = schema["$defs"]["BaselineFinding"]
     assert set(finding_schema["required"]) == set(finding_schema["properties"])
+    assert finding_schema["properties"]["actual_value"]["anyOf"] == [
+        {"type": "number"},
+        {"type": "null"},
+    ]
     assert "PAGE 1" in payload["input"]
 
 

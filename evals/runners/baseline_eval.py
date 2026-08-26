@@ -65,6 +65,10 @@ class BaselineRequest(CanonicalModel):
 class BaselineFinding(EngineFinding):
     """Engine-compatible finding with OpenAI-strict required nullable fields."""
 
+    actual_value: float | None
+    servicer_value: float | None
+    difference: float | None
+    monthly_impact: float | None
     recommended_action: str | None = Field(min_length=1)
 
 
