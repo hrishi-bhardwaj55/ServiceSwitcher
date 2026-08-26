@@ -4,9 +4,9 @@ ServicerSwitch is a demoable mortgage-servicing transfer auditor. It combines a
 deterministic financial reconciliation engine with a tool-using AI investigator,
 and requires document-level evidence for every AI-assisted claim.
 
-> Status: C6 complete — 1,500 synthetic PDFs now cover five document types and
-> three structurally distinct template families, including a protected held-out
-> family. See the
+> Status: C7 complete — deterministic parsing classifies 1,200 development-layout
+> PDFs and extracts all 4,080 typed fields with page and bounding-box provenance at
+> 100% measured accuracy. See the
 > [implementation ledger](docs/progress.md).
 
 ## Project principles
@@ -27,6 +27,7 @@ and requires document-level evidence for every AI-assisted claim.
 - [Deterministic reconciliation engine](docs/reconciliation-engine.md)
 - [Deterministic engine evaluation](evals/reports/engine.md)
 - [Synthetic document rendering](docs/document-rendering.md)
+- [Deterministic PDF extraction](docs/deterministic-extraction.md)
 - [Implementation progress](docs/progress.md)
 
 ## Services
@@ -125,3 +126,16 @@ The output contains 1,500 PDFs under `data/documents/<account_id>/`, split 40%, 
 and 20% across modern, legacy, and held-out layouts. Validation checks every page
 count and required extractable value. CI also prevents the held-out family from
 being referenced by extraction code or prompts under `apps/ai/`.
+
+## Deterministic extraction
+
+Measure the plain-parser baseline on the permitted development layouts:
+
+```bash
+make eval-extraction-deterministic
+```
+
+The extractor uses keyword signatures and label proximity over PyMuPDF word
+coordinates. It returns typed money, rate, date, text, and due-date fields with a
+one-based page, bounding box, source text, and confidence. The stable report is
+written to `evals/reports/extraction_deterministic.md`.

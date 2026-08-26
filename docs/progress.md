@@ -13,7 +13,8 @@ is merged to `main`.
 | C4 — deterministic reconciliation engine | Complete | Five detectors, explicit explained outcome, tolerance boundary tests, and HTTP contract pass; tag `c4-done` |
 | C5 — first eval number | Complete | 100% precision/recall/F1, 0/100 clean false positives, and $0.0000 impact MAE across 300 HTTP reconciliations; tag `c5-done` |
 | C6 — document rendering | Complete | 1,500/1,500 PDFs pass page-count and extractable-value validation; exact A/B/C split is 120/120/60; tag `c6-done` |
-| C7–C16 | Not started | Mandatory chunk order preserved |
+| C7 — deterministic extraction | Complete | A and B each score 100% classification, field accuracy, and provenance coverage across 1,200 PDFs and 4,080 fields; tag `c7-done` |
+| C8–C16 | Not started | Mandatory chunk order preserved |
 
 ## Durable decisions
 
@@ -58,3 +59,11 @@ is merged to `main`.
   any Family C reference under `apps/ai/`.
 - PDF validation combines pypdf page/text checks across all 1,500 artifacts with
   Poppler-rendered visual inspection of representative documents from each family.
+- Deterministic extraction groups PyMuPDF words into visual lines and accepts values
+  only when strict type parsing succeeds on the same row or immediately below a
+  known label. It does not infer missing values.
+- Extracted percentages use the canonical fractional representation, money remains
+  exact `Decimal`, and every accepted value carries a one-based page, value bounding
+  box, source text, and bounded confidence.
+- The development-set accuracy floors are recorded in tests at 99% classification
+  and 98% fields; both layouts currently score 100%, with 100% provenance coverage.

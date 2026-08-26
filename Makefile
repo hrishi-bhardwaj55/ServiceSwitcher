@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: up down verify lint-ai test-engine test-ai test-data test-faults test-render test-evals test-web generate-accounts validate-accounts inject-faults validate-ground-truth eval-engine render-documents validate-documents check-heldout-isolation
+.PHONY: up down verify lint-ai test-engine test-ai test-extraction test-data test-faults test-render test-evals test-web generate-accounts validate-accounts inject-faults validate-ground-truth eval-engine render-documents validate-documents check-heldout-isolation eval-extraction-deterministic
 
 up:
 	docker compose up --build -d
@@ -19,6 +19,9 @@ test-engine:
 
 test-ai:
 	$(PYTHON) -W error -m pytest -p no:cacheprovider apps/ai
+
+test-extraction:
+	$(PYTHON) -W error -m pytest -p no:cacheprovider apps/ai/tests/extraction
 
 generate-accounts:
 	$(PYTHON) -m data.generator.generate --output data/accounts --count 300 --seed 20250825
@@ -56,6 +59,9 @@ validate-documents: render-documents
 
 check-heldout-isolation:
 	$(PYTHON) -m data.render.check_heldout --ai-root apps/ai
+
+eval-extraction-deterministic: validate-documents test-extraction
+	$(PYTHON) -m evals.runners.deterministic_extraction_eval --accounts data/accounts --documents data/documents
 
 test-web:
 	npm --prefix apps/web run typecheck
