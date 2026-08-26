@@ -169,9 +169,9 @@ def _extraction() -> ExtractionResult:
     )
 
 
-def _finding() -> EngineFinding:
+def _finding(finding_type="ESCROW_BALANCE_MISMATCH") -> EngineFinding:
     return EngineFinding(
-        finding_type="ESCROW_BALANCE_MISMATCH",
+        finding_type=finding_type,
         severity="LOW",
         confidence=1.0,
         actual_value=Decimal("1200.00"),
@@ -200,8 +200,11 @@ def _tool(name="get_extracted_field", arguments=None):
     return InvestigatorDecision(
         tool_call=InvestigatorToolCall(
             name=name,
-            arguments=arguments
-            or {"document_id": DOCUMENT_ID, "field_name": "escrow_balance"},
+            arguments=(
+                arguments
+                if arguments is not None
+                else {"document_id": DOCUMENT_ID, "field_name": "escrow_balance"}
+            ),
         ),
         usage=_usage(),
     )
@@ -310,23 +313,27 @@ def test_graph_recovers_from_tool_error_and_accepts_later_resolution(tmp_path):
         [
             _tool("unknown_tool", {"value": "bad"}),
             _tool(),
-            _resolve("EXPLAINED"),
+            _resolve("UNEXPLAINED"),
         ],
     )
 
     result = graph.invoke(state, config)
 
-    assert result["final_findings"] == []
+    assert len(result["final_findings"]) == 1
     assert result["requires_review"] is False
     assert result["steps_used"] == 2
     events = _events(tmp_path)
     assert events[0]["status"] == "error"
     assert events[1]["status"] == "ok"
-    assert events[2]["result_summary"].startswith("EXPLAINED")
+    assert events[2]["result_summary"].startswith("UNEXPLAINED")
 
 
 def test_graph_stops_at_twelve_tools_and_interrupts_for_review(tmp_path):
-    graph, state, config, _, _, _ = _harness(tmp_path, [_tool()] * 12)
+    decisions = [
+        _tool("search_regulations", {"query": f"query {index}", "limit": 1})
+        for index in range(12)
+    ]
+    graph, state, config, _, _, _ = _harness(tmp_path, decisions)
 
     result = graph.invoke(state, config)
 
@@ -337,6 +344,19 @@ def test_graph_stops_at_twelve_tools_and_interrupts_for_review(tmp_path):
     events = _events(tmp_path)
     assert len([event for event in events if event["event"] == "tool_call"]) == 12
     assert events[-1]["event"] == "budget_exhausted"
+
+
+def test_graph_stops_repeated_successful_tool_call_as_non_progress(tmp_path):
+    graph, state, config, _, _, _ = _harness(tmp_path, [_tool(), _tool()])
+
+    result = graph.invoke(state, config)
+
+    assert result["steps_used"] == 2
+    assert result["requires_review"] is True
+    assert "__interrupt__" in result
+    events = _events(tmp_path)
+    assert events[-1]["status"] == "rejected"
+    assert "duplicate successful tool call" in events[-1]["result_summary"]
 
 
 def test_graph_refuses_a_model_call_that_could_cross_cost_budget(tmp_path):
@@ -355,15 +375,44 @@ def test_graph_refuses_a_model_call_that_could_cross_cost_budget(tmp_path):
 def test_graph_rejects_resolution_until_an_evidence_tool_succeeds(tmp_path):
     graph, state, config, model, _, _ = _harness(
         tmp_path,
-        [_resolve("EXPLAINED"), _tool(), _resolve("EXPLAINED")],
+        [_resolve("UNEXPLAINED"), _tool(), _resolve("UNEXPLAINED")],
+    )
+
+    result = graph.invoke(state, config)
+
+    assert len(result["final_findings"]) == 1
+    assert result["steps_used"] == 1
+    assert model.requests[1].observations[0].is_error is True
+    assert "use at least one evidence tool" in model.requests[1].observations[0].result_summary
+
+
+def test_graph_rejects_unsupported_explanation_and_preserves_finding(tmp_path):
+    graph, state, config, _, _, _ = _harness(
+        tmp_path,
+        [_tool(), _resolve("EXPLAINED")],
+    )
+
+    result = graph.invoke(state, config)
+
+    assert len(result["final_findings"]) == 1
+    assert result["requires_review"] is True
+    assert "__interrupt__" in result
+    assert _events(tmp_path)[-1]["status"] == "rejected"
+
+
+def test_graph_accepts_explanation_with_structured_engine_support(tmp_path):
+    payment_finding = _finding("UNEXPLAINED_PAYMENT_INCREASE")
+    graph, state, config, _, _, _ = _harness(
+        tmp_path,
+        [_tool("calculate_payment_breakdown", {}), _resolve("EXPLAINED")],
+        findings=[payment_finding],
     )
 
     result = graph.invoke(state, config)
 
     assert result["final_findings"] == []
-    assert result["steps_used"] == 1
-    assert model.requests[1].observations[0].is_error is True
-    assert "use at least one evidence tool" in model.requests[1].observations[0].result_summary
+    assert result["requires_review"] is False
+    assert _events(tmp_path)[-1]["status"] == "ok"
 
 
 def test_human_review_interrupt_resumes_with_checkpointed_decision(tmp_path):

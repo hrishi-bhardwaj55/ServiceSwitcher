@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
@@ -174,6 +175,7 @@ class AuditNodes:
         for finding_index, finding in enumerate(ambiguous):
             observations: list[ToolObservation] = []
             successful_tools = 0
+            successful_invocations: set[tuple[str, str]] = set()
             while True:
                 request = InvestigationRequest(
                     audit_id=audit_id,
@@ -234,6 +236,28 @@ class AuditNodes:
                         )
                         continue
                     resolution = decision.resolution
+                    explanation_supported = (
+                        resolution.outcome != "EXPLAINED"
+                        or _has_deterministic_explanation(finding, observations)
+                    )
+                    if not explanation_supported:
+                        final.append(finding)
+                        review = True
+                        logger.append(
+                            event="model_resolution",
+                            finding_type=finding.finding_type,
+                            status="rejected",
+                            result_summary=(
+                                "REQUIRES_REVIEW: model explanation lacked explicit "
+                                "deterministic support"
+                            ),
+                            input_tokens=decision.usage.input_tokens,
+                            output_tokens=decision.usage.output_tokens,
+                            cost_usd=turn_cost,
+                            cumulative_cost_usd=cost,
+                            steps_used=steps,
+                        )
+                        break
                     logger.append(
                         event="model_resolution",
                         finding_type=finding.finding_type,
@@ -253,6 +277,29 @@ class AuditNodes:
 
                 tool_call = decision.tool_call
                 steps += 1
+                invocation = (
+                    tool_call.name,
+                    json.dumps(tool_call.arguments, sort_keys=True, separators=(",", ":")),
+                )
+                if invocation in successful_invocations:
+                    review = True
+                    final.extend(ambiguous[finding_index:])
+                    logger.append(
+                        event="tool_call",
+                        finding_type=finding.finding_type,
+                        status="rejected",
+                        tool=tool_call.name,
+                        arguments=tool_call.arguments,
+                        result_summary=(
+                            "duplicate successful tool call rejected; human review required"
+                        ),
+                        input_tokens=decision.usage.input_tokens,
+                        output_tokens=decision.usage.output_tokens,
+                        cost_usd=turn_cost,
+                        cumulative_cost_usd=cost,
+                        steps_used=steps,
+                    )
+                    return _investigation_update(final, review, steps, cost)
                 status: Literal["ok", "error"] = "ok"
                 try:
                     if tool_call.name not in tools:
@@ -260,6 +307,7 @@ class AuditNodes:
                     output = tools[tool_call.name].invoke(tool_call.arguments, context)
                     summary = output.content
                     successful_tools += 1
+                    successful_invocations.add(invocation)
                 except Exception as error:
                     status = "error"
                     summary = f"{type(error).__name__}: {error}"
@@ -388,6 +436,26 @@ def _bounded_observation(value: str) -> str:
         return value
     marker = "...[TRUNCATED]"
     return value[: OBSERVATION_LIMIT - len(marker)] + marker
+
+
+def _has_deterministic_explanation(
+    finding: EngineFinding,
+    observations: list[ToolObservation],
+) -> bool:
+    """Allow suppression only when a structured engine result says it is explained."""
+    if finding.finding_type != "UNEXPLAINED_PAYMENT_INCREASE":
+        return False
+    for observation in observations:
+        if observation.is_error or observation.tool != "calculate_payment_breakdown":
+            continue
+        try:
+            result = json.loads(observation.result_summary)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        decomposition = result.get("payment_decomposition")
+        if isinstance(decomposition, dict) and decomposition.get("outcome") == "EXPLAINED":
+            return True
+    return False
 
 
 def _investigation_update(

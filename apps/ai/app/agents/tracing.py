@@ -21,7 +21,7 @@ class TrajectoryEvent(CanonicalModel):
     audit_id: str
     event: Literal["tool_call", "model_resolution", "budget_exhausted"]
     finding_type: str
-    status: Literal["ok", "error", "stopped"]
+    status: Literal["ok", "error", "rejected", "stopped"]
     tool: str | None = None
     arguments: dict[str, object] = Field(default_factory=dict)
     result_summary: str = ""
