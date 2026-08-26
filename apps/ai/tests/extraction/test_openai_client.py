@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from app.llm import (
     LLMExtractionRequest,
     LLMExtractionResponse,
@@ -95,3 +97,28 @@ def test_openai_client_supports_classification_only_requests():
 
     assert result.fields == []
     assert "Requested fields: none; classify only" in captured["payload"]["input"]
+
+
+def test_openai_client_redacts_credentials_from_transport_failures():
+    api_key = "sensitive-test-key"
+
+    def transport(url, headers, payload, timeout):
+        raise RuntimeError(f"request failed for Bearer {api_key}")
+
+    client = OpenAIResponsesClient(
+        api_key=api_key,
+        model="test-model",
+        transport=transport,
+    )
+    request = LLMExtractionRequest(
+        document_type="TRANSFER_NOTICE",
+        requested_fields=[],
+        pages=[LLMPage(page=1, text="Servicing transfer notice")],
+    )
+
+    with pytest.raises(RuntimeError) as raised:
+        client.extract(request)
+
+    assert api_key not in str(raised.value)
+    assert "[REDACTED]" in str(raised.value)
+    assert raised.value.__context__ is None

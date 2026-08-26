@@ -71,15 +71,21 @@ class OpenAIResponsesClient:
                 }
             },
         }
-        response = self.transport(
-            f"{self.api_base}/responses",
-            {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            },
-            payload,
-            self.timeout,
-        )
+        transport_failure = None
+        try:
+            response = self.transport(
+                f"{self.api_base}/responses",
+                {
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                payload,
+                self.timeout,
+            )
+        except Exception as error:
+            transport_failure = str(error).replace(self.api_key, "[REDACTED]")
+        if transport_failure is not None:
+            raise RuntimeError(f"model provider request failed: {transport_failure}")
         return LLMExtractionResponse.model_validate_json(_output_text(response))
 
 
