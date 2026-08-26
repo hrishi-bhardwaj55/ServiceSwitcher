@@ -4,7 +4,7 @@ ServicerSwitch is a demoable mortgage-servicing transfer auditor. It combines a
 deterministic financial reconciliation engine with a tool-using AI investigator,
 and requires document-level evidence for every AI-assisted claim.
 
-> Status: C13 measured — the bounded investigator and naive long-context baseline
+> Status: C13 complete — the bounded investigator and naive long-context baseline
 > have both been evaluated over the same 300 PDF-backed audits. See the
 > [implementation ledger](docs/progress.md).
 

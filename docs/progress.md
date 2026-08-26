@@ -19,7 +19,7 @@ is merged to `main`.
 | C10 — agent tools | Complete | Exactly eight strict, audit-bound tools; every tool passes happy-path, malformed-argument, cross-audit, and truncation tests; tag `c10-done` |
 | C11 — investigator agent | Complete | Exact LangGraph pipeline, one agentic node, 12-call/$0.25 fail-closed budgets, JSONL trajectories, HITL checkpoint resume, and live CASE-0042 finding preserved; tag `c11-done` |
 | C12 — agent evaluation | Complete | 300/300 exact finding sets, 0/100 clean false positives, 40.00% automated success, 55.00% faulted-case tool accuracy, 13/13 tool-error recovery, and zero model errors; tag `c12-done` |
-| C13 — naive baseline | In progress | Canonical one-call run completed 300/300 without execution failures: 25.95% F1, 16.67% exact-set success, 75.00% clean FPR, and 87.50% tricky FPR |
+| C13 — naive baseline | Complete | 300/300 one-call cases without execution failures: 25.95% F1, 16.67% exact-set success, 75.00% clean FPR, and 87.50% tricky FPR; tag `c13-done` |
 | C14–C16 | Not started | Mandatory chunk order preserved |
 
 ## Durable decisions
