@@ -1,8 +1,7 @@
 # Audit-scoped agent tools
 
-C10 exposes exactly eight operations to the future investigator agent. The tools
-are framework-neutral in this chunk; C11 will connect them to the bounded agent
-loop.
+C10 exposes exactly eight operations to the investigator agent. C11 connects the
+framework-neutral contracts to the bounded LangGraph investigation loop.
 
 | Tool | Data boundary |
 |---|---|
@@ -28,6 +27,8 @@ There is no general SQL, filesystem, URL-fetch, or arbitrary calculator tool. Th
 three financial operations can only call the typed reconciliation endpoint. Tool
 responses are serialized through one output boundary and capped at 8,000
 characters. Truncated responses end with an explicit `...[TRUNCATED]` marker.
+The financial tools also derive the servicing-transfer date from the trusted bound
+account; the model cannot supply or alter it.
 
 ## Configuration and verification
 

@@ -17,7 +17,8 @@ is merged to `main`.
 | C8 — LLM fallback and extraction eval | Complete | Real `gpt-5.4-mini` run: A/B 100% classification/fields/pages with 0% fallback; held-out C 100% classification, 93.04% fields, 78.14% pages, 100% fallback; tag `c8-done` |
 | C9 — knowledge base and retrieval | Complete | 47 primary-source chunks ingested at 512 dimensions; hybrid and vector each reach 96.00% Recall@5, with hybrid selected on 0.9200 vs 0.9000 MRR; tag `c9-done` |
 | C10 — agent tools | Complete | Exactly eight strict, audit-bound tools; every tool passes happy-path, malformed-argument, cross-audit, and truncation tests; tag `c10-done` |
-| C11–C16 | Not started | Mandatory chunk order preserved |
+| C11 — investigator agent | Complete | Exact LangGraph pipeline, one agentic node, 12-call/$0.25 fail-closed budgets, JSONL trajectories, HITL checkpoint resume, and live CASE-0042 finding preserved; tag `c11-done` |
+| C12–C16 | Not started | Mandatory chunk order preserved |
 
 ## Durable decisions
 
@@ -101,3 +102,16 @@ is merged to `main`.
   and regulation search uses only the measured C9 hybrid path.
 - Every tool response shares an 8,000-character cap and an explicit
   `...[TRUNCATED]` marker so context growth is bounded and visible to the model.
+- The C11 graph contains the specification's exact node sequence. All document,
+  reconciliation, evidence, and risk nodes are deterministic; only ambiguous-finding
+  investigation calls a model.
+- Investigator calls use the Responses API through a strict one-action boundary,
+  with `gpt-5.4-mini` pricing enforced in code, a maximum of 12 tool calls and 32
+  model turns, and a conservative $0.25 preflight cost ceiling per audit.
+- A model resolution cannot erase an engine finding merely by saying it is
+  explained. Suppression requires a structured deterministic result that explicitly
+  explains the same condition; unsupported explanations and repeated successful
+  tool calls preserve the finding and require human review.
+- Trajectories are append-only JSONL under ignored `data/traces/`, including bounded
+  arguments and result summaries, token counts, per-turn and cumulative cost, and
+  rejected or exhausted actions. Provider keys are never logged.
