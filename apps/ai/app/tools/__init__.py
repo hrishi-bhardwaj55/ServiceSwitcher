@@ -7,6 +7,8 @@ from app.tools.core import (
     ToolInvocationContext,
     ToolOutput,
 )
+from app.tools.dependencies import ToolDependencies
+from app.tools.registry import TOOL_NAMES, build_agent_tools
 
 __all__ = [
     "AuditScopeError",
@@ -14,4 +16,7 @@ __all__ = [
     "ScopedAgentTool",
     "ToolInvocationContext",
     "ToolOutput",
+    "ToolDependencies",
+    "TOOL_NAMES",
+    "build_agent_tools",
 ]
