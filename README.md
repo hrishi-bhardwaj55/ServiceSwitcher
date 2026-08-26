@@ -4,8 +4,8 @@ ServicerSwitch is a demoable mortgage-servicing transfer auditor. It combines a
 deterministic financial reconciliation engine with a tool-using AI investigator,
 and requires document-level evidence for every AI-assisted claim.
 
-> Status: C12 complete — the bounded investigator has been measured over all 300
-> PDF-backed audits, including clean and held-out cases. See the
+> Status: C13 measured — the bounded investigator and naive long-context baseline
+> have both been evaluated over the same 300 PDF-backed audits. See the
 > [implementation ledger](docs/progress.md).
 
 ## Project principles
@@ -33,6 +33,8 @@ and requires document-level evidence for every AI-assisted claim.
 - [Regulation knowledge base](knowledge-base/README.md)
 - [Retrieval evaluation](evals/reports/rag.md)
 - [End-to-end investigator evaluation](evals/reports/agent.md)
+- [Naive long-context baseline](evals/reports/baseline.md)
+- [Agent versus baseline comparison](evals/reports/comparison.md)
 - [Measured evaluation decisions](docs/evals.md)
 - [Audit-scoped agent tools](docs/agent-tools.md)
 - [Investigator agent](docs/investigator-agent.md)
@@ -46,6 +48,7 @@ and requires document-level evidence for every AI-assisted claim.
 | Model-backed extraction | 1,500 PDFs | A/B 100% fields; held-out C 93.04% fields and 78.14% page citations |
 | Hybrid regulation retrieval | 25 queries | 96.00% Recall@5; 0.9200 MRR |
 | End-to-end investigator | 300 audits | 100% finding F1; 0% clean/tricky false positives; 40% automated task success |
+| Naive long-context baseline | 300 audits | 25.95% finding F1; 75.00% clean FPR; 87.50% tricky FPR |
 
 ## Services
 
@@ -260,3 +263,23 @@ audits. Exact primary-tool selection was 70.00% overall and 55.00% on faulted
 cases; 13/13 tool-error cases recovered. Investigator cost averaged $0.001730 per
 audit, with 2.320s p50 and 5.632s p95 local latency. See the
 [full report](evals/reports/agent.md) for scope and limitations.
+
+## Naive long-context baseline
+
+Run the architecture comparison over the same 300 labeled audits with:
+
+```bash
+make eval-baseline
+```
+
+The baseline concatenates text from all five PDFs and makes exactly one structured
+`gpt-5.4-mini` call per audit. It has no extraction pipeline, reconciliation engine,
+retrieval, tools, or LLM judge. The canonical run completed without provider errors
+but reached only 25.95% finding F1 and 16.67% exact finding-set success. It produced
+false positives on 75.00% of all clean audits and 87.50% of clean-but-tricky audits,
+at $0.003795 mean model cost and 3.624s / 7.721s p50 / p95 latency.
+
+See the [baseline report](evals/reports/baseline.md) and the measured
+[side-by-side comparison](evals/reports/comparison.md). Baseline cost includes its
+full-document call; investigator cost covers investigator tokens and excludes
+embeddings and already-cached extraction calls.

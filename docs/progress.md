@@ -19,7 +19,8 @@ is merged to `main`.
 | C10 — agent tools | Complete | Exactly eight strict, audit-bound tools; every tool passes happy-path, malformed-argument, cross-audit, and truncation tests; tag `c10-done` |
 | C11 — investigator agent | Complete | Exact LangGraph pipeline, one agentic node, 12-call/$0.25 fail-closed budgets, JSONL trajectories, HITL checkpoint resume, and live CASE-0042 finding preserved; tag `c11-done` |
 | C12 — agent evaluation | Complete | 300/300 exact finding sets, 0/100 clean false positives, 40.00% automated success, 55.00% faulted-case tool accuracy, 13/13 tool-error recovery, and zero model errors; tag `c12-done` |
-| C13–C16 | Not started | Mandatory chunk order preserved |
+| C13 — naive baseline | In progress | Canonical one-call run completed 300/300 without execution failures: 25.95% F1, 16.67% exact-set success, 75.00% clean FPR, and 87.50% tricky FPR |
+| C14–C16 | Not started | Mandatory chunk order preserved |
 
 ## Durable decisions
 
@@ -123,3 +124,10 @@ is merged to `main`.
   false positives across 100 clean cases, recovered all 13 tool-error cases, and had
   zero model-error cases. The 60.00% review rate and 55.00% faulted-case exact tool
   accuracy are retained as primary limitations rather than hidden by 100% F1.
+- The C13 baseline receives page-delimited text from all five PDFs in one structured
+  model request. It has no tools, engine, retrieval, extraction fallback, or judge.
+  Strict output fields use required nullable values, and monetary outputs are JSON
+  numbers so provider-valid strings cannot fail downstream decimal parsing.
+- The canonical baseline run is serialized and cached by the complete request
+  payload. Its 25.95% finding F1, 75.00% all-clean FPR, and 87.50% tricky FPR are
+  reported without tuning the prompt against individual cases.

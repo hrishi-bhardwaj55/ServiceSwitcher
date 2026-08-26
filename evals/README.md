@@ -110,3 +110,24 @@ The 300-case `gpt-5.4-mini` result is in `evals/reports/agent.md`. Finding F1 is
 60.00% of cases route to human review. The report explicitly notes that the engine
 reconciles the canonical audit record; this is not a PDF-only ledger reconstruction
 benchmark.
+
+## Naive long-context baseline
+
+`evals/runners/baseline_eval.py` loads the same five PDFs and sends their complete
+page-delimited extracted text in one `gpt-5.4-mini` structured-output call per case.
+It deliberately has no extraction fallback, engine, retrieval, tools, or judge:
+
+```bash
+make eval-baseline
+```
+
+Successful responses append to an ignored JSONL cache keyed by provider base, prompt
+version, and the complete request payload. Interrupted runs can resume without
+repeating completed paid calls. Invalid outputs count as execution failures and are
+not retried as a second model answer for the same scored case.
+
+The canonical 300-case run completed with zero execution failures: 20.28% precision,
+36.00% recall, 25.95% F1, 16.67% exact finding-set success, 75.00% all-clean FPR, and
+87.50% tricky FPR. Mean model cost was $0.003795 per audit and serialized latency was
+3.624s / 7.721s p50 / p95. Generated results are in `evals/reports/baseline.md`; the
+agent comparison is in `evals/reports/comparison.md`.
