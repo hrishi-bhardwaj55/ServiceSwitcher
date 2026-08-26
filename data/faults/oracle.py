@@ -10,7 +10,10 @@ from app.schemas.ground_truth import FindingType
 
 from data.faults.common import payment_residual
 from data.generator.money import money
-from data.generator.validate import _analysis_expected_values
+from data.generator.validate import (
+    _analysis_expected_values_for_charges,
+    _split_money,
+)
 
 
 @dataclass(frozen=True)
@@ -59,18 +62,48 @@ def evaluate(account: MortgageAccount) -> list[ObservedFinding]:
             )
         )
 
-    tax_bill = next(bill for bill in account.tax_bills if bill.tax_year == 2025)
-    policy = next(
-        policy for policy in account.insurance_policies if policy.renewal_date.year == 2025
+    actual_tax_charges: list[tuple[int, Decimal]] = []
+    for tax_bill in (bill for bill in account.tax_bills if bill.tax_year == 2025):
+        installments = _split_money(tax_bill.annual_amount, len(tax_bill.due_dates))
+        actual_tax_charges.extend(
+            (due_date.month, installment)
+            for due_date, installment in zip(
+                tax_bill.due_dates,
+                installments,
+                strict=True,
+            )
+        )
+    actual_tax_total = sum(
+        (amount for _, amount in actual_tax_charges),
+        Decimal("0.00"),
     )
+    projected_tax_charges: list[tuple[int, Decimal]] = []
+    allocated = Decimal("0.00")
+    for index, (month, actual_amount) in enumerate(actual_tax_charges):
+        if index == len(actual_tax_charges) - 1:
+            projected_amount = money(new_analysis.projected_annual_tax - allocated)
+        else:
+            projected_amount = money(
+                new_analysis.projected_annual_tax * actual_amount / actual_tax_total
+            )
+            allocated = money(allocated + projected_amount)
+        projected_tax_charges.append((month, projected_amount))
+    charges = projected_tax_charges
+    for policy in (
+        policy
+        for policy in account.insurance_policies
+        if policy.renewal_date.year == 2025
+    ):
+        charges.append(
+            (policy.renewal_date.month, new_analysis.projected_annual_insurance)
+        )
     principal_and_interest = money(
         account.payments[0].principal + account.payments[0].interest
     )
-    _, expected_shortage, _, _ = _analysis_expected_values(
+    _, expected_shortage, _, _ = _analysis_expected_values_for_charges(
         new_analysis,
         principal_and_interest,
-        tuple(due_date.month for due_date in tax_bill.due_dates),
-        policy.renewal_date.month,
+        charges,
     )
     shortage_difference = money(abs(new_analysis.stated_shortage - expected_shortage))
     if shortage_difference > Decimal("10.00"):
