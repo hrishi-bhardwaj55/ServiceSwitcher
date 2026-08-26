@@ -53,7 +53,10 @@ Normal verification uses only the deterministic fake. Tests prove that:
 - invalid values and pages are rejected;
 - unknown document text can be classified through fallback;
 - the real adapter sends strict structured-output configuration and untrusted-text
-  delimiters through a fake HTTP transport.
+  delimiters through a fake HTTP transport;
+- provider failures cannot expose credentials through raised errors;
+- semantic contract violations are retried, and successful responses can be resumed
+  from an ignored request-hash cache.
 
 One `llm`-marked integration test calls the configured real provider. `make verify`
 and `make test-extraction` explicitly exclude this marker.
@@ -61,20 +64,34 @@ and `make test-extraction` explicitly exclude this marker.
 ## Honest evaluation gate
 
 `make eval-extraction` requires real `LLM_API_KEY` and `LLM_MODEL` process
-environment variables. (Docker Compose reads `.env`; the local runner does not.) It evaluates
-all 300 accounts but reports two separate columns: 240 A/B accounts and 60 held-out
-accounts. The report includes document classification, exact field accuracy, page
-citation accuracy, and fallback trigger rate. `evals/reports/calibration.md` groups
-field confidence into five buckets and compares mean confidence with observed exact
-accuracy.
-
-The canonical C8 reports have not been generated because this workspace has no
-model credentials. Fake-client test results are deliberately not promoted as model
-accuracy. Once credentials are supplied, run:
+environment variables. (Docker Compose reads `.env`; the local runner does not.) It
+evaluates all 300 accounts but reports two separate columns: 240 A/B accounts and 60
+held-out accounts. The report includes document classification, exact field accuracy,
+page citation accuracy, and fallback trigger rate. `evals/reports/calibration.md`
+groups field confidence into five buckets and compares mean confidence with observed
+exact accuracy. Run it with:
 
 ```bash
 make eval-extraction
 ```
 
-Only after that real run passes and both reports are reviewed should C8 be marked
-complete or merged to `main`.
+## Measured result
+
+The canonical run used `gpt-5.4-mini`, not the deterministic fake:
+
+| Metric | In-distribution (A/B) | Held-out (Family C) |
+|---|---:|---:|
+| Document classification | 100.00% | 100.00% |
+| Field extraction | 100.00% | 93.04% |
+| Citation (page) accuracy | 100.00% | 78.14% |
+| LLM fallback trigger rate | 0.00% | 100.00% |
+
+The high-confidence held-out bucket contains 1,018 fields with 98.22% mean stated
+confidence and 93.22% observed accuracy. The gap demonstrates that provider
+confidence is not calibrated enough to bypass review. Page citation is the weakest
+held-out dimension and remains visible rather than being pooled with A/B results.
+
+The first complete run made 300 cache misses. An immediate reproduction made 300
+cache hits, zero provider calls, and generated the same metrics. See the canonical
+[extraction report](../evals/reports/extraction.md) and
+[calibration report](../evals/reports/calibration.md).

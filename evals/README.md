@@ -60,3 +60,13 @@ LLM_API_KEY=... LLM_MODEL=... make eval-extraction
 This command intentionally requires a real configured provider. The deterministic
 fake is limited to tests; its scripted output is never written as the canonical
 accuracy report.
+
+The canonical `gpt-5.4-mini` run records 100% classification for both cohorts. A/B
+retains 100% field and page accuracy with no fallback. Held-out Family C records
+93.04% exact fields, 78.14% exact pages, and a 100% fallback rate. Full results are in
+`evals/reports/extraction.md` and `evals/reports/calibration.md`.
+
+Successful provider responses are appended to the ignored
+`data/traces/extraction_llm_cache.jsonl` file. The cache key covers the provider base,
+model, prompt-contract version, and complete typed request, allowing interrupted
+evaluations to resume without presenting cached fake output as a real model result.
