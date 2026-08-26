@@ -105,7 +105,11 @@ services:
       engine:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3000 >/dev/null 2>&1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget -q -O - http://127.0.0.1:3000 >/dev/null 2>&1 && wget -q -O - http://127.0.0.1:3000/demo/case-0042-property-tax-bill-page-1.png >/dev/null 2>&1",
+        ]
       interval: 5s
       timeout: 3s
       retries: 12
