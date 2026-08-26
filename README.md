@@ -4,8 +4,9 @@ ServicerSwitch is a demoable mortgage-servicing transfer auditor. It combines a
 deterministic financial reconciliation engine with a tool-using AI investigator,
 and requires document-level evidence for every AI-assisted claim.
 
-> Status: C4 complete — the deterministic Java reconciliation engine now evaluates
-> the validated account and ground-truth corpus. See the
+> Status: C5 complete — the deterministic engine scores 100% precision and recall,
+> zero clean-case false positives, and $0.0000 impact error across 300 structured
+> cases. See the
 > [implementation ledger](docs/progress.md).
 
 ## Project principles
@@ -24,6 +25,7 @@ and requires document-level evidence for every AI-assisted claim.
 - [Synthetic account generation](docs/synthetic-data.md)
 - [Fault injection and ground truth](docs/fault-injection.md)
 - [Deterministic reconciliation engine](docs/reconciliation-engine.md)
+- [Deterministic engine evaluation](evals/reports/engine.md)
 - [Implementation progress](docs/progress.md)
 
 ## Services
@@ -94,3 +96,17 @@ make validate-ground-truth
 
 This produces 200 single-fault cases, 60 clean cases, and 40 clean-but-tricky cases,
 with exact labels in `data/ground_truth/cases.jsonl`.
+
+## Deterministic engine evaluation
+
+Run the structured-data baseline before any document extraction or AI processing:
+
+```bash
+make eval-engine
+```
+
+The target is strict: 100% precision, recall, and F1; zero false positives across
+the 100 clean cases; and financial-impact mean absolute error below $0.01. The
+runner packages and starts an isolated engine process, evaluates all 300 cases over
+`POST /reconcile`, writes `evals/reports/engine.md`, and exits nonzero if any target
+is missed.

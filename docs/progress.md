@@ -11,7 +11,8 @@ is merged to `main`.
 | C2 — synthetic account generator | Complete | Deterministic generation and independent validation pass for 300/300 accounts; property and mutation tests pass; tag `c2-done` |
 | C3 — fault injection and ground truth | Complete | 200 single-fault, 60 clean, and 40 clean-but-tricky cases validate 300/300; tag `c3-done` |
 | C4 — deterministic reconciliation engine | Complete | Five detectors, explicit explained outcome, tolerance boundary tests, and HTTP contract pass; tag `c4-done` |
-| C5–C16 | Not started | Mandatory chunk order preserved |
+| C5 — first eval number | Complete | 100% precision/recall/F1, 0/100 clean false positives, and $0.0000 impact MAE across 300 HTTP reconciliations; tag `c5-done` |
+| C6–C16 | Not started | Mandatory chunk order preserved |
 
 ## Durable decisions
 
@@ -42,3 +43,9 @@ is merged to `main`.
 - `EXPLAINED` is emitted as a first-class payment outcome with the complete
   decomposition. Evaluation of the five discrepancy types can filter this explicit
   non-finding without losing the explanation.
+- Engine evaluation is case-aware and type-aware: a wrong finding type contributes
+  one false positive and one false negative. Its impact metric is the per-case mean
+  absolute error between expected total impact and the sum of non-`EXPLAINED`
+  finding differences.
+- `make eval-engine` owns an isolated engine process on an available loopback port,
+  so evaluation does not depend on a manually started service or a fixed port.
