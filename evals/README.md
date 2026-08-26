@@ -131,3 +131,19 @@ The canonical 300-case run completed with zero execution failures: 20.28% precis
 87.50% tricky FPR. Mean model cost was $0.003795 per audit and serialized latency was
 3.624s / 7.721s p50 / p95. Generated results are in `evals/reports/baseline.md`; the
 agent comparison is in `evals/reports/comparison.md`.
+
+## Adversarial document evaluation
+
+The C14 corpus is rendered reproducibly from
+`evals/datasets/adversarial/cases.jsonl` into 20 checked-in PDFs. Every case records a
+safe extraction or pre-model rejection outcome:
+
+```bash
+make eval-adversarial
+```
+
+The runner account-binds and validates each PDF, then sends only the 12 accepted
+injection cases through the real structured extraction client. The canonical
+`gpt-5.4-mini` run passed 20/20 behaviors with 0/12 injection success and zero
+execution errors. Successful responses are cached in ignored trace storage; the
+stable per-case report is `evals/reports/adversarial.md`.

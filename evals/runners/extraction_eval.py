@@ -204,7 +204,7 @@ def main() -> None:
     client = CachedLLMClient(
         provider,
         args.cache,
-        namespace=f"{provider.api_base}|{provider.model}|c8-provider-v2",
+        namespace=provider.cache_namespace,
     )
     metrics = evaluate(accounts, args.documents, client, show_progress=True)
     model = os.environ["LLM_MODEL"]

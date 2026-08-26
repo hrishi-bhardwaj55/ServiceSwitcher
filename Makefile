@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: up down verify lint-ai test-engine test-ai test-extraction test-retrieval test-tools test-agent test-data test-faults test-render test-evals test-web generate-accounts validate-accounts inject-faults validate-ground-truth eval-engine render-documents validate-documents check-heldout-isolation eval-extraction-deterministic eval-extraction db-migrate ingest-kb eval-rag run-audit eval-all eval-baseline
+.PHONY: up down verify lint-ai test-engine test-ai test-extraction test-retrieval test-tools test-agent test-data test-faults test-render test-evals test-web generate-accounts validate-accounts inject-faults validate-ground-truth eval-engine render-documents validate-documents check-heldout-isolation eval-extraction-deterministic eval-extraction db-migrate ingest-kb eval-rag run-audit eval-all eval-baseline generate-adversarial eval-adversarial
 
 up:
 	docker compose up --build -d
@@ -54,6 +54,12 @@ eval-all: validate-documents test-agent test-evals
 
 eval-baseline: validate-documents test-evals
 	$(PYTHON) -m evals.runners.baseline_eval
+
+generate-adversarial:
+	$(PYTHON) evals/datasets/adversarial/generate.py
+
+eval-adversarial: generate-adversarial test-ai test-evals
+	$(PYTHON) -m evals.runners.adversarial_eval
 
 generate-accounts:
 	$(PYTHON) -m data.generator.generate --output data/accounts --count 300 --seed 20250825

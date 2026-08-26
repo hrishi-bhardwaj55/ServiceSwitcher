@@ -16,6 +16,7 @@ from app.tools.engine import EngineFinding
 class DocumentRef(CanonicalModel):
     audit_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$")
     document_id: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
+    account_id: str | None = Field(default=None, pattern=r"^SS-\d{4}$")
     path: Path
 
 

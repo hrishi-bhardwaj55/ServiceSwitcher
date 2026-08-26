@@ -144,6 +144,29 @@ def test_invalid_model_value_is_rejected_and_left_missing(tmp_path: Path):
     assert result.requires_review
 
 
+@pytest.mark.parametrize("raw_value", ["-$1.00", "$999,999,999,999.99"])
+def test_out_of_range_model_money_is_rejected_and_left_missing(
+    tmp_path: Path,
+    raw_value: str,
+):
+    document = tmp_path / "sparse.pdf"
+    _write_sparse_statement(document)
+    fake = DeterministicFakeLLM(
+        [
+            _response(
+                "OLD_SERVICER_STATEMENT",
+                [("principal_balance", raw_value, 1, 0.99)],
+            )
+        ]
+    )
+
+    result = extract_with_fallback(document, fake)
+
+    assert "principal_balance" in result.rejected_fields
+    assert "principal_balance" in result.missing_fields
+    assert result.requires_review
+
+
 def test_model_can_classify_when_keyword_classifier_cannot(tmp_path: Path):
     document = tmp_path / "unknown.pdf"
     canvas = Canvas(str(document))

@@ -12,10 +12,12 @@ from urllib.request import Request, urlopen
 from pydantic import ValidationError
 
 from app.llm.models import LLMExtractionRequest, LLMExtractionResponse
+from app.security import wrap_untrusted_json
 
 DEFAULT_API_BASE = "https://api.openai.com/v1"
 DEFAULT_TIMEOUT_SECONDS = 60
 DEFAULT_RESPONSE_ATTEMPTS = 3
+PROMPT_VERSION = "c14-untrusted-v1"
 JsonObject = dict[str, Any]
 Transport = Callable[[str, Mapping[str, str], JsonObject, int], Mapping[str, Any]]
 
@@ -63,6 +65,10 @@ class OpenAIResponsesClient:
             model=model,
             api_base=os.getenv("LLM_API_BASE", DEFAULT_API_BASE),
         )
+
+    @property
+    def cache_namespace(self) -> str:
+        return f"{self.api_base}|{self.model}|{PROMPT_VERSION}"
 
     def extract(self, request: LLMExtractionRequest) -> LLMExtractionResponse:
         payload = {
@@ -113,15 +119,11 @@ class OpenAIResponsesClient:
 def _user_input(request: LLMExtractionRequest) -> str:
     expected_type = request.document_type or "unknown; classify it"
     fields = ", ".join(request.requested_fields) or "none; classify only"
-    pages = "\n".join(
-        f"--- PAGE {page.page} ---\n{page.text}" for page in request.pages
-    )
+    pages = [page.model_dump(mode="json") for page in request.pages]
     return (
         f"Expected document type: {expected_type}\n"
         f"Requested fields: {fields}\n"
-        "<UNTRUSTED_DOCUMENT_TEXT>\n"
-        f"{pages}\n"
-        "</UNTRUSTED_DOCUMENT_TEXT>"
+        f"{wrap_untrusted_json('UNTRUSTED_DOCUMENT_TEXT', {'pages': pages})}"
     )
 
 

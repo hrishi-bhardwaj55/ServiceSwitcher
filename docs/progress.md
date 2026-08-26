@@ -20,7 +20,8 @@ is merged to `main`.
 | C11 — investigator agent | Complete | Exact LangGraph pipeline, one agentic node, 12-call/$0.25 fail-closed budgets, JSONL trajectories, HITL checkpoint resume, and live CASE-0042 finding preserved; tag `c11-done` |
 | C12 — agent evaluation | Complete | 300/300 exact finding sets, 0/100 clean false positives, 40.00% automated success, 55.00% faulted-case tool accuracy, 13/13 tool-error recovery, and zero model errors; tag `c12-done` |
 | C13 — naive baseline | Complete | 300/300 one-call cases without execution failures: 25.95% F1, 16.67% exact-set success, 75.00% clean FPR, and 87.50% tricky FPR; tag `c13-done` |
-| C14–C16 | Not started | Mandatory chunk order preserved |
+| C14 — adversarial suite | In progress | 20/20 recorded behaviors passed; 8/8 unsafe documents rejected pre-model; 0/12 prompt-injection success; zero execution errors |
+| C15–C16 | Not started | Mandatory chunk order preserved |
 
 ## Durable decisions
 
@@ -131,3 +132,10 @@ is merged to `main`.
 - The canonical baseline run is serialized and cached by the complete request
   payload. Its 25.95% finding F1, 75.00% all-clean FPR, and 87.50% tricky FPR are
   reported without tuning the prompt against individual cases.
+- C14 binds documents to trusted account IDs and rejects empty/image-only,
+  cross-account, contradictory, out-of-range, and implausibly dated text before model
+  use. Model context uses collision-safe JSON delimiters, and typed output values are
+  normalized and range-checked again.
+- The fixed 20-PDF C14 corpus is reproducibly rendered from its JSONL manifest. The
+  canonical model run preserved trusted extraction in all 12 injection cases and
+  rejected the other eight cases without a model call.

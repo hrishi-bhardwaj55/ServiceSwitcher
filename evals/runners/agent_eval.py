@@ -558,9 +558,7 @@ def main() -> None:
     extraction_client = CachedLLMClient(
         extraction_provider,
         args.extraction_cache,
-        namespace=(
-            f"{extraction_provider.api_base}|{extraction_provider.model}|c8-provider-v2"
-        ),
+        namespace=extraction_provider.cache_namespace,
     )
     with managed_database_engine() as database:
         corpus = load_corpus(args.corpus)

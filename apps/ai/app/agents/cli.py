@@ -77,6 +77,7 @@ def document_refs(root: Path, audit_id: str, account_id: str) -> list[DocumentRe
         DocumentRef(
             audit_id=audit_id,
             document_id=document_id,
+            account_id=account_id,
             path=account_root / filename,
         )
         for filename, document_id in DOCUMENT_IDS.items()
@@ -98,9 +99,7 @@ def run_audit(args: argparse.Namespace) -> AuditRunResult:
     extraction_client = CachedLLMClient(
         extraction_provider,
         args.extraction_cache,
-        namespace=(
-            f"{extraction_provider.api_base}|{extraction_provider.model}|c8-provider-v2"
-        ),
+        namespace=extraction_provider.cache_namespace,
     )
     with managed_database_engine() as engine:
         corpus = load_corpus(args.corpus)
