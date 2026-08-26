@@ -5,6 +5,4 @@ import com.servicerswitch.engine.payment.PaymentDecomposition;
 import java.util.List;
 
 public record ReconcileResponse(
-        List<Finding> findings,
-        PaymentDecomposition paymentDecomposition,
-        String engineVersion) {}
+    List<Finding> findings, PaymentDecomposition paymentDecomposition, String engineVersion) {}

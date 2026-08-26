@@ -5,7 +5,4 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record TaxBill(
-        String authority,
-        int taxYear,
-        BigDecimal annualAmount,
-        List<LocalDate> dueDates) {}
+    String authority, int taxYear, BigDecimal annualAmount, List<LocalDate> dueDates) {}

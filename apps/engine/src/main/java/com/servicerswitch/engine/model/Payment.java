@@ -4,8 +4,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 public record Payment(
-        LocalDate date,
-        BigDecimal total,
-        BigDecimal principal,
-        BigDecimal interest,
-        BigDecimal escrow) {}
+    LocalDate date,
+    BigDecimal total,
+    BigDecimal principal,
+    BigDecimal interest,
+    BigDecimal escrow) {}

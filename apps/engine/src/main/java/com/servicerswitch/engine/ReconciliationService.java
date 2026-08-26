@@ -13,24 +13,25 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class ReconciliationService {
-    private static final String ENGINE_VERSION = "1.0.0";
-    private final EscrowCalculator escrowCalculator = new EscrowCalculator();
-    private final PaymentCalculator paymentCalculator = new PaymentCalculator();
-    private final FindingRegistry registry = new FindingRegistry();
+  private static final String ENGINE_VERSION = "1.0.0";
+  private final EscrowCalculator escrowCalculator = new EscrowCalculator();
+  private final PaymentCalculator paymentCalculator = new PaymentCalculator();
+  private final FindingRegistry registry = new FindingRegistry();
 
-    public ReconcileResponse reconcile(ReconcileRequest request) {
-        int analysisCount = request.account().escrowAnalyses().size();
-        EscrowAnalysis currentAnalysis = request.account().escrowAnalyses().get(analysisCount - 1);
-        int projectionYear = request.account().taxBills().stream()
-                .mapToInt(bill -> bill.taxYear())
-                .max()
-                .orElseThrow(() -> new IllegalArgumentException("missing tax bill"));
-        EscrowComputation escrow = escrowCalculator.compute(
-                request.account(), currentAnalysis, projectionYear);
-        PaymentDecomposition payment = paymentCalculator.decompose(
-                request.account(), request.transferDate());
-        ReconciliationContext context = new ReconciliationContext(
-                request.account(), request.transferDate(), escrow, payment);
-        return new ReconcileResponse(registry.evaluate(context), payment, ENGINE_VERSION);
-    }
+  public ReconcileResponse reconcile(ReconcileRequest request) {
+    int analysisCount = request.account().escrowAnalyses().size();
+    EscrowAnalysis currentAnalysis = request.account().escrowAnalyses().get(analysisCount - 1);
+    int projectionYear =
+        request.account().taxBills().stream()
+            .mapToInt(bill -> bill.taxYear())
+            .max()
+            .orElseThrow(() -> new IllegalArgumentException("missing tax bill"));
+    EscrowComputation escrow =
+        escrowCalculator.compute(request.account(), currentAnalysis, projectionYear);
+    PaymentDecomposition payment =
+        paymentCalculator.decompose(request.account(), request.transferDate());
+    ReconciliationContext context =
+        new ReconciliationContext(request.account(), request.transferDate(), escrow, payment);
+    return new ReconcileResponse(registry.evaluate(context), payment, ENGINE_VERSION);
+  }
 }

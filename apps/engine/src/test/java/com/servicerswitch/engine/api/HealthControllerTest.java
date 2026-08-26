@@ -12,14 +12,15 @@ import org.springframework.test.web.servlet.MockMvc;
 
 class HealthControllerTest {
 
-    private final MockMvc mockMvc = standaloneSetup(new HealthController()).build();
+  private final MockMvc mockMvc = standaloneSetup(new HealthController()).build();
 
-    @Test
-    void healthEndpointReportsServiceStatus() throws Exception {
-        mockMvc.perform(get("/health"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.service").value("engine"))
-                .andExpect(jsonPath("$.status").value("ok"));
-    }
+  @Test
+  void healthEndpointReportsServiceStatus() throws Exception {
+    mockMvc
+        .perform(get("/health"))
+        .andExpect(status().isOk())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+        .andExpect(jsonPath("$.service").value("engine"))
+        .andExpect(jsonPath("$.status").value("ok"));
+  }
 }

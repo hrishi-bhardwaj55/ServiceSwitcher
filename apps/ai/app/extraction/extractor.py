@@ -9,7 +9,13 @@ from typing import Any, Literal
 import pymupdf
 
 from app.extraction.classifier import classify_document
-from app.extraction.models import BoundingBox, DocumentType, ExtractedField, ExtractionResult
+from app.extraction.models import (
+    BoundingBox,
+    DocumentType,
+    ExtractedField,
+    ExtractionResult,
+    FieldName,
+)
 from app.extraction.normalizers import (
     normalize_date,
     normalize_money,
@@ -23,7 +29,7 @@ ParserKind = Literal["money", "rate", "date", "text", "dates"]
 
 @dataclass(frozen=True)
 class FieldRule:
-    field_name: str
+    field_name: FieldName
     aliases: tuple[str, ...]
     parser: ParserKind
 
@@ -101,7 +107,7 @@ def _extract_rule(document: pymupdf.Document, rule: FieldRule) -> ExtractedField
     return _field(rule.field_name, value, match)
 
 
-def _field(field_name: str, value: Any, match: ProximityMatch) -> ExtractedField:
+def _field(field_name: FieldName, value: Any, match: ProximityMatch) -> ExtractedField:
     rectangle = match.rectangle
     return ExtractedField(
         field_name=field_name,

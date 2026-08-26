@@ -7,12 +7,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class HealthController {
 
-    @GetMapping("/health")
-    public HealthResponse health() {
-        return new HealthResponse("engine", "ok");
-    }
+  @GetMapping("/health")
+  public HealthResponse health() {
+    return new HealthResponse("engine", "ok");
+  }
 
-    public record HealthResponse(
-            @JsonProperty("service") String service,
-            @JsonProperty("status") String status) {}
+  public record HealthResponse(
+      @JsonProperty("service") String service, @JsonProperty("status") String status) {}
 }

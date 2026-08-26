@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import cast
 
 from app.schemas.mortgage import CanonicalModel
 from app.tools.core import DEFAULT_MAX_OUTPUT_CHARS, ScopedAgentTool
@@ -71,7 +72,11 @@ def build_agent_tools(
             name=name,
             bound_audit_id=audit_id,
             argument_model=argument_model,
-            handler=_bind(handler, audit_id, dependencies),
+            handler=_bind(
+                cast(Callable[[CanonicalModel, str, ToolDependencies], object], handler),
+                audit_id,
+                dependencies,
+            ),
             max_output_chars=max_output_chars,
         )
     if tuple(tools) != TOOL_NAMES:

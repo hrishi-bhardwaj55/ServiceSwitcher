@@ -6,7 +6,7 @@ import com.servicerswitch.engine.payment.PaymentDecomposition;
 import java.time.LocalDate;
 
 public record ReconciliationContext(
-        MortgageAccount account,
-        LocalDate transferDate,
-        EscrowComputation escrowComputation,
-        PaymentDecomposition paymentDecomposition) {}
+    MortgageAccount account,
+    LocalDate transferDate,
+    EscrowComputation escrowComputation,
+    PaymentDecomposition paymentDecomposition) {}
