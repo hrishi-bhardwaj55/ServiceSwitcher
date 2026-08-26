@@ -10,6 +10,7 @@ requires-python = ">=3.12,<3.14"
 dependencies = [
   "alembic>=1.16,<2",
   "fastapi==0.141.1",
+  "langgraph==1.2.11",
   "psycopg[binary]>=3.2,<4",
   "pymupdf>=1.26,<2",
   "sqlalchemy>=2.0,<3",
