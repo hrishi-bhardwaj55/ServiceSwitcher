@@ -83,14 +83,15 @@ def calculate_escrow_continuity(
     dependencies: ToolDependencies,
 ) -> object:
     """Ask the deterministic engine whether escrow value continued across transfer."""
-    result = _reconcile(arguments.transfer_date.isoformat(), audit_id, dependencies)
+    del arguments
+    transfer_date, result = _reconcile(audit_id, dependencies)
     findings = [
         finding
         for finding in result.findings
         if finding.finding_type == "ESCROW_BALANCE_MISMATCH"
     ]
     return {
-        "transfer_date": arguments.transfer_date,
+        "transfer_date": transfer_date,
         "engine_version": result.engine_version,
         "findings": findings,
     }
@@ -102,9 +103,10 @@ def calculate_payment_breakdown(
     dependencies: ToolDependencies,
 ) -> object:
     """Ask the deterministic engine to decompose the payment change at transfer."""
-    result = _reconcile(arguments.transfer_date.isoformat(), audit_id, dependencies)
+    del arguments
+    transfer_date, result = _reconcile(audit_id, dependencies)
     return {
-        "transfer_date": arguments.transfer_date,
+        "transfer_date": transfer_date,
         "engine_version": result.engine_version,
         "payment_decomposition": result.payment_decomposition,
     }
@@ -116,14 +118,15 @@ def compare_tax_projection(
     dependencies: ToolDependencies,
 ) -> object:
     """Ask the deterministic engine to compare projected tax with the actual tax bill."""
-    result = _reconcile(arguments.transfer_date.isoformat(), audit_id, dependencies)
+    del arguments
+    transfer_date, result = _reconcile(audit_id, dependencies)
     findings = [
         finding
         for finding in result.findings
         if finding.finding_type == "PROPERTY_TAX_PROJECTION_MISMATCH"
     ]
     return {
-        "transfer_date": arguments.transfer_date,
+        "transfer_date": transfer_date,
         "engine_version": result.engine_version,
         "findings": findings,
     }
@@ -153,6 +156,9 @@ def mark_information_missing(
     )
 
 
-def _reconcile(transfer_date: str, audit_id: str, dependencies: ToolDependencies):
+def _reconcile(audit_id: str, dependencies: ToolDependencies):
     account = dependencies.audit_data.get_account(audit_id)
-    return dependencies.engine.reconcile(account, transfer_date)
+    if len(account.servicing_periods) < 2:
+        raise ValueError("account has no servicing transfer")
+    transfer_date = account.servicing_periods[1].start_date.isoformat()
+    return transfer_date, dependencies.engine.reconcile(account, transfer_date)

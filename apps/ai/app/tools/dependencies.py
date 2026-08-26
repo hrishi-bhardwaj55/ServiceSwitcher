@@ -41,6 +41,12 @@ class AuditDataSource(Protocol):
     def get_extraction(self, audit_id: str, document_id: str) -> StoredExtraction: ...
 
 
+class MutableAuditDataSource(AuditDataSource, Protocol):
+    """Audit data source populated by deterministic graph extraction."""
+
+    def store_extraction(self, extraction: StoredExtraction) -> None: ...
+
+
 class RegulationSearch(Protocol):
     def hybrid(self, query: str, *, limit: int = 5) -> list[SearchResult]: ...
 
@@ -93,6 +99,12 @@ class InMemoryAuditDataSource:
         if record.audit_id != audit_id:
             raise AuditScopeError("document belongs to a different audit")
         return record
+
+    def store_extraction(self, extraction: StoredExtraction) -> None:
+        existing = self._extractions.get(extraction.document_id)
+        if existing is not None and existing.audit_id != extraction.audit_id:
+            raise AuditScopeError("cannot replace a document owned by another audit")
+        self._extractions[extraction.document_id] = extraction
 
 
 class InMemoryMissingInformationSink:

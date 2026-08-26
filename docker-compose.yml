@@ -41,9 +41,15 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://servicerswitch:servicerswitch@postgres:5432/servicerswitch}
       ENGINE_API_BASE: ${ENGINE_API_BASE:-http://engine:8080}
       LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-gpt-5.4-mini}
+      LLM_API_BASE: ${LLM_API_BASE:-https://api.openai.com/v1}
+      AGENT_API_KEY: ${AGENT_API_KEY:-}
+      AGENT_MODEL: ${AGENT_MODEL:-gpt-5.4-mini}
+      AGENT_API_BASE: ${AGENT_API_BASE:-https://api.openai.com/v1}
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-512}
+      EMBEDDING_API_BASE: ${EMBEDDING_API_BASE:-https://api.openai.com/v1}
     ports:
       - "8000:8000"
     depends_on:

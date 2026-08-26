@@ -98,3 +98,18 @@ def test_missing_information_sink_is_append_only_and_audit_labeled():
     assert first.record_id == "missing-000001"
     assert second.record_id == "missing-000002"
     assert sink.records == [first, second]
+
+
+def test_extraction_store_allows_same_audit_updates_but_blocks_owner_changes():
+    source = InMemoryAuditDataSource(
+        [AuditRecord(audit_id="audit-a", account=_account("SS-A"))],
+        [],
+    )
+    document = _extraction("audit-a", "statement")
+
+    source.store_extraction(document)
+    source.store_extraction(document)
+
+    assert source.get_extraction("audit-a", "statement") == document
+    with pytest.raises(AuditScopeError, match="owned by another audit"):
+        source.store_extraction(_extraction("audit-b", "statement"))

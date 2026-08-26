@@ -38,9 +38,9 @@ HAPPY_ARGUMENTS = {
     },
     "get_escrow_ledger": {"start_date": "2024-06-01", "end_date": "2024-06-30"},
     "get_payment_history": {"start_date": "2024-05-01", "end_date": "2024-06-01"},
-    "calculate_escrow_continuity": {"transfer_date": "2024-06-01"},
-    "calculate_payment_breakdown": {"transfer_date": "2024-06-01"},
-    "compare_tax_projection": {"transfer_date": "2024-06-01"},
+    "calculate_escrow_continuity": {},
+    "calculate_payment_breakdown": {},
+    "compare_tax_projection": {},
     "search_regulations": {"query": "escrow transfer balance", "limit": 2},
     "mark_information_missing": {
         "document_type": "PROPERTY_TAX_BILL",

@@ -4,8 +4,9 @@ ServicerSwitch is a demoable mortgage-servicing transfer auditor. It combines a
 deterministic financial reconciliation engine with a tool-using AI investigator,
 and requires document-level evidence for every AI-assisted claim.
 
-> Status: C10 complete — eight strict agent tools are bound to one framework audit,
-> with per-tool validation, scope, and truncation coverage. See the
+> Status: C11 complete — the bounded LangGraph investigator runs PDFs through
+> deterministic reconciliation, evidence validation, budget enforcement, trajectory
+> logging, and human-review interrupts. See the
 > [implementation ledger](docs/progress.md).
 
 ## Project principles
@@ -34,6 +35,7 @@ and requires document-level evidence for every AI-assisted claim.
 - [Retrieval evaluation](evals/reports/rag.md)
 - [Measured evaluation decisions](docs/evals.md)
 - [Audit-scoped agent tools](docs/agent-tools.md)
+- [Investigator agent](docs/investigator-agent.md)
 - [Implementation progress](docs/progress.md)
 
 ## Services
@@ -200,3 +202,34 @@ make test-tools
 
 See [the tool boundary documentation](docs/agent-tools.md) for the complete surface
 and deployment configuration.
+
+## Investigator agent
+
+The C11 graph keeps document loading, extraction, reconciliation, evidence checks,
+and risk calculation deterministic. Only the ambiguous-finding investigation node
+may call the model. It is capped at 12 tool calls and $0.25 per audit, rejects
+repeated successful calls, and routes exhausted or unsupported resolutions to human
+review without dropping the engine finding.
+
+Put the provider key in the ignored repository-root `.env` file:
+
+```dotenv
+LLM_API_KEY=your-key
+LLM_MODEL=gpt-5.4-mini
+LLM_API_BASE=https://api.openai.com/v1
+```
+
+`AGENT_API_KEY`, `AGENT_MODEL`, and `AGENT_API_BASE` may override those shared
+values. The embedding client similarly reuses `LLM_API_KEY` unless
+`EMBEDDING_API_KEY` is set. Run one complete audit with:
+
+```bash
+make run-audit CASE=CASE-0042
+```
+
+The command validates the synthetic PDFs, starts PostgreSQL and the deterministic
+engine, ingests the regulation corpus, and prints typed findings. Every attempted
+tool call is recorded in `data/traces/CASE-0042.jsonl` with bounded arguments and
+result summaries, token usage, and cumulative cost. See
+[the investigator documentation](docs/investigator-agent.md) for graph behavior,
+fail-closed resolution rules, and focused verification commands.
