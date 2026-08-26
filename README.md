@@ -4,9 +4,9 @@ ServicerSwitch is a demoable mortgage-servicing transfer auditor. It combines a
 deterministic financial reconciliation engine with a tool-using AI investigator,
 and requires document-level evidence for every AI-assisted claim.
 
-> Status: C7 complete — deterministic parsing classifies 1,200 development-layout
-> PDFs and extracts all 4,080 typed fields with page and bounding-box provenance at
-> 100% measured accuracy. See the
+> Status: C7 complete; C8 in progress — confidence-gated model fallback and its
+> split evaluation harness are implemented and tested, while the real provider run
+> awaits `LLM_API_KEY` and `LLM_MODEL`. See the
 > [implementation ledger](docs/progress.md).
 
 ## Project principles
@@ -28,6 +28,7 @@ and requires document-level evidence for every AI-assisted claim.
 - [Deterministic engine evaluation](evals/reports/engine.md)
 - [Synthetic document rendering](docs/document-rendering.md)
 - [Deterministic PDF extraction](docs/deterministic-extraction.md)
+- [Model-backed extraction fallback](docs/llm-extraction-fallback.md)
 - [Implementation progress](docs/progress.md)
 
 ## Services
@@ -139,3 +140,21 @@ The extractor uses keyword signatures and label proximity over PyMuPDF word
 coordinates. It returns typed money, rate, date, text, and due-date fields with a
 one-based page, bounding box, source text, and confidence. The stable report is
 written to `evals/reports/extraction_deterministic.md`.
+
+## Model-backed fallback
+
+Export real provider credentials into the process environment before running the
+local evaluator:
+
+```bash
+LLM_API_KEY=... LLM_MODEL=... make eval-extraction
+```
+
+PowerShell users can set `$env:LLM_API_KEY` and `$env:LLM_MODEL`, then run the same
+Make target. A repository `.env` file is consumed by Docker Compose, not implicitly
+by the local Python runner.
+
+The fallback requests only missing or low-confidence fields, schema-validates every
+response, rejects invalid pages and values, and surfaces deterministic/model
+disagreements for review. The real evaluation intentionally reports development and
+held-out layouts in separate columns and writes a confidence-calibration report.

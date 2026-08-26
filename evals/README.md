@@ -45,3 +45,18 @@ make eval-extraction-deterministic
 The current 1,200-document, 4,080-field result is recorded in
 `evals/reports/extraction_deterministic.md`. The runner excludes the held-out
 template set; that comparison begins only with the fallback evaluation chunk.
+
+## Model-backed extraction evaluation
+
+`evals/runners/extraction_eval.py` evaluates the confidence-gated provider fallback
+and keeps the development and held-out cohorts separate. It reports classification,
+field, page-citation, and fallback-trigger metrics, then writes confidence calibration
+by cohort:
+
+```bash
+LLM_API_KEY=... LLM_MODEL=... make eval-extraction
+```
+
+This command intentionally requires a real configured provider. The deterministic
+fake is limited to tests; its scripted output is never written as the canonical
+accuracy report.
