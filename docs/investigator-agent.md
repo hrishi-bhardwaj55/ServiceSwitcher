@@ -14,9 +14,11 @@ load_documents -> classify -> extract -> validate_extraction -> reconcile
   -> validate_evidence -> calculate_risk -> prepare_report
 ```
 
-When reconciliation returns no findings, the graph skips retrieval and model use.
-Every node except `investigate_ambiguous_findings` is deterministic. The graph and
-all eight tools share one mutable, audit-scoped extraction store, and every document
+When reconciliation returns no findings, the graph skips retrieval and investigator
+model use. All nodes have fixed control flow; classification and extraction may use
+the confidence-gated C8 structured fallback for low-confidence or held-out PDFs,
+while `investigate_ambiguous_findings` is the only agentic node. The graph and all
+eight tools share one mutable, audit-scoped extraction store, and every document
 reference must carry the graph's audit identifier.
 
 `prepare_report` uses a checkpointed LangGraph interrupt whenever evidence,
@@ -95,6 +97,9 @@ non-progress, trajectory bounds, and checkpointed human-review resume. A live
 CASE-0042 run preserved the engine's `PROPERTY_TAX_PROJECTION_MISMATCH` with exact
 $613.17 total and $51.10 monthly impact; a repeated comparison was stopped at two
 steps and routed to review instead of allowing the model to discard the finding.
+
+The complete 300-case behavior and limitations are recorded in the
+[agent evaluation report](../evals/reports/agent.md).
 
 LangGraph checkpoint and interrupt behavior follows its official
 [interrupt documentation](https://docs.langchain.com/oss/python/langgraph/interrupts).

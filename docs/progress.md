@@ -18,7 +18,8 @@ is merged to `main`.
 | C9 — knowledge base and retrieval | Complete | 47 primary-source chunks ingested at 512 dimensions; hybrid and vector each reach 96.00% Recall@5, with hybrid selected on 0.9200 vs 0.9000 MRR; tag `c9-done` |
 | C10 — agent tools | Complete | Exactly eight strict, audit-bound tools; every tool passes happy-path, malformed-argument, cross-audit, and truncation tests; tag `c10-done` |
 | C11 — investigator agent | Complete | Exact LangGraph pipeline, one agentic node, 12-call/$0.25 fail-closed budgets, JSONL trajectories, HITL checkpoint resume, and live CASE-0042 finding preserved; tag `c11-done` |
-| C12–C16 | Not started | Mandatory chunk order preserved |
+| C12 — agent evaluation | Complete | 300/300 exact finding sets, 0/100 clean false positives, 40.00% automated success, 55.00% faulted-case tool accuracy, 13/13 tool-error recovery, and zero model errors; tag `c12-done` |
+| C13–C16 | Not started | Mandatory chunk order preserved |
 
 ## Durable decisions
 
@@ -102,9 +103,9 @@ is merged to `main`.
   and regulation search uses only the measured C9 hybrid path.
 - Every tool response shares an 8,000-character cap and an explicit
   `...[TRUNCATED]` marker so context growth is bounded and visible to the model.
-- The C11 graph contains the specification's exact node sequence. All document,
-  reconciliation, evidence, and risk nodes are deterministic; only ambiguous-finding
-  investigation calls a model.
+- The C11 graph contains the specification's exact node sequence. Reconciliation,
+  evidence, and risk nodes are deterministic. Document extraction has fixed control
+  flow with the bounded C8 fallback; only ambiguous-finding investigation is agentic.
 - Investigator calls use the Responses API through a strict one-action boundary,
   with `gpt-5.4-mini` pricing enforced in code, a maximum of 12 tool calls and 32
   model turns, and a conservative $0.25 preflight cost ceiling per audit.
@@ -115,3 +116,10 @@ is merged to `main`.
 - Trajectories are append-only JSONL under ignored `data/traces/`, including bounded
   arguments and result summaries, token counts, per-turn and cumulative cost, and
   rejected or exhausted actions. Provider keys are never logged.
+- C12 exposed and fixed two integration failures before numbers were published: the
+  audit graph now uses the C8 confidence-gated fallback for held-out Family C PDFs,
+  and investigator transport calls have bounded retries for transient failures.
+- The canonical C12 run is serialized. It scored 200/200 expected findings with no
+  false positives across 100 clean cases, recovered all 13 tool-error cases, and had
+  zero model-error cases. The 60.00% review rate and 55.00% faulted-case exact tool
+  accuracy are retained as primary limitations rather than hidden by 100% F1.

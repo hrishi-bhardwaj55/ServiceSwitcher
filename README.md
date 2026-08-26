@@ -4,9 +4,8 @@ ServicerSwitch is a demoable mortgage-servicing transfer auditor. It combines a
 deterministic financial reconciliation engine with a tool-using AI investigator,
 and requires document-level evidence for every AI-assisted claim.
 
-> Status: C11 complete — the bounded LangGraph investigator runs PDFs through
-> deterministic reconciliation, evidence validation, budget enforcement, trajectory
-> logging, and human-review interrupts. See the
+> Status: C12 complete — the bounded investigator has been measured over all 300
+> PDF-backed audits, including clean and held-out cases. See the
 > [implementation ledger](docs/progress.md).
 
 ## Project principles
@@ -33,10 +32,20 @@ and requires document-level evidence for every AI-assisted claim.
 - [Extraction confidence calibration](evals/reports/calibration.md)
 - [Regulation knowledge base](knowledge-base/README.md)
 - [Retrieval evaluation](evals/reports/rag.md)
+- [End-to-end investigator evaluation](evals/reports/agent.md)
 - [Measured evaluation decisions](docs/evals.md)
 - [Audit-scoped agent tools](docs/agent-tools.md)
 - [Investigator agent](docs/investigator-agent.md)
 - [Implementation progress](docs/progress.md)
+
+## Measured results
+
+| Evaluation | Corpus | Key result |
+|---|---:|---|
+| Deterministic engine | 300 accounts | 100% precision / recall / F1; 0% clean false positives |
+| Model-backed extraction | 1,500 PDFs | A/B 100% fields; held-out C 93.04% fields and 78.14% page citations |
+| Hybrid regulation retrieval | 25 queries | 96.00% Recall@5; 0.9200 MRR |
+| End-to-end investigator | 300 audits | 100% finding F1; 0% clean/tricky false positives; 40% automated task success |
 
 ## Services
 
@@ -205,11 +214,12 @@ and deployment configuration.
 
 ## Investigator agent
 
-The C11 graph keeps document loading, extraction, reconciliation, evidence checks,
-and risk calculation deterministic. Only the ambiguous-finding investigation node
-may call the model. It is capped at 12 tool calls and $0.25 per audit, rejects
-repeated successful calls, and routes exhausted or unsupported resolutions to human
-review without dropping the engine finding.
+The C11 graph keeps reconciliation, evidence checks, and risk calculation
+deterministic. Document extraction has fixed control flow with the confidence-gated
+C8 model fallback; only the ambiguous-finding investigation node is agentic. It is
+capped at 12 tool calls and $0.25 per audit, rejects repeated successful calls, and
+routes exhausted or unsupported resolutions to human review without dropping the
+engine finding.
 
 Put the provider key in the ignored repository-root `.env` file:
 
@@ -233,3 +243,20 @@ tool call is recorded in `data/traces/CASE-0042.jsonl` with bounded arguments an
 result summaries, token usage, and cumulative cost. See
 [the investigator documentation](docs/investigator-agent.md) for graph behavior,
 fail-closed resolution rules, and focused verification commands.
+
+## End-to-end agent evaluation
+
+Run all 300 PDF-backed audits and regenerate the canonical report with:
+
+```bash
+make eval-all
+```
+
+The serialized `gpt-5.4-mini` run produced 100% finding precision, recall, F1, and
+exact-set task success, with zero false positives on 60 clean and 40
+clean-but-tricky cases. Those finding numbers include fail-closed review cases:
+automated task success was 40.00% and human review was required for 60.00% of
+audits. Exact primary-tool selection was 70.00% overall and 55.00% on faulted
+cases; 13/13 tool-error cases recovered. Investigator cost averaged $0.001730 per
+audit, with 2.320s p50 and 5.632s p95 local latency. See the
+[full report](evals/reports/agent.md) for scope and limitations.
