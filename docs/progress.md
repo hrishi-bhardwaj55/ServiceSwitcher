@@ -16,7 +16,8 @@ is merged to `main`.
 | C7 — deterministic extraction | Complete | A and B each score 100% classification, field accuracy, and provenance coverage across 1,200 PDFs and 4,080 fields; tag `c7-done` |
 | C8 — LLM fallback and extraction eval | Complete | Real `gpt-5.4-mini` run: A/B 100% classification/fields/pages with 0% fallback; held-out C 100% classification, 93.04% fields, 78.14% pages, 100% fallback; tag `c8-done` |
 | C9 — knowledge base and retrieval | Complete | 47 primary-source chunks ingested at 512 dimensions; hybrid and vector each reach 96.00% Recall@5, with hybrid selected on 0.9200 vs 0.9000 MRR; tag `c9-done` |
-| C10–C16 | Not started | Mandatory chunk order preserved |
+| C10 — agent tools | Complete | Exactly eight strict, audit-bound tools; every tool passes happy-path, malformed-argument, cross-audit, and truncation tests; tag `c10-done` |
+| C11–C16 | Not started | Mandatory chunk order preserved |
 
 ## Durable decisions
 
@@ -91,3 +92,12 @@ is merged to `main`.
 - C9 compares exactly vector-only retrieval and hybrid vector plus PostgreSQL
   `tsvector` retrieval. Hybrid RRF with `k=60` is the production choice because it
   preserved 96.00% Recall@5 and improved MRR from 0.9000 to 0.9200.
+- Agent tool schemas never accept `audit_id`; the framework binds a registry to one
+  audit and supplies a trusted invocation context. Mismatches fail before argument
+  parsing or dependency access, with document ownership checked again at the data
+  source.
+- The agent receives no arbitrary SQL, filesystem, URL-fetch, or calculator tool.
+  Financial calculations cross a strict typed boundary to the deterministic engine,
+  and regulation search uses only the measured C9 hybrid path.
+- Every tool response shares an 8,000-character cap and an explicit
+  `...[TRUNCATED]` marker so context growth is bounded and visible to the model.

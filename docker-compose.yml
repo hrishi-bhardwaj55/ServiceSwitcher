@@ -39,6 +39,7 @@ services:
       context: ./apps/ai
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://servicerswitch:servicerswitch@postgres:5432/servicerswitch}
+      ENGINE_API_BASE: ${ENGINE_API_BASE:-http://engine:8080}
       LLM_API_KEY: ${LLM_API_KEY:-}
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
@@ -46,6 +47,8 @@ services:
     ports:
       - "8000:8000"
     depends_on:
+      engine:
+        condition: service_healthy
       postgres:
         condition: service_healthy
     healthcheck:
