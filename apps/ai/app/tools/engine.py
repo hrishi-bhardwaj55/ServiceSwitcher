@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from collections.abc import Callable, Mapping
 from decimal import Decimal
 from typing import Literal, Protocol
@@ -47,7 +48,7 @@ class EngineFinding(CanonicalModel):
     explanation: str = Field(min_length=1)
     evidence: list[EngineEvidence]
     relevant_sources: list[str]
-    recommended_action: str = Field(min_length=1)
+    recommended_action: str | None = Field(default=None, min_length=1)
 
     @field_validator("confidence", mode="before")
     @classmethod
@@ -99,6 +100,10 @@ class HttpReconciliationEngine:
         self.reconcile_url = f"{base_url.rstrip('/')}/reconcile"
         self.timeout = timeout
         self.transport = transport or _post_json
+
+    @classmethod
+    def from_env(cls) -> HttpReconciliationEngine:
+        return cls(os.getenv("ENGINE_API_BASE", DEFAULT_ENGINE_URL))
 
     def reconcile(
         self,

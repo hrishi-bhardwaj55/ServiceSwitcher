@@ -103,6 +103,14 @@ def test_http_engine_sends_canonical_account_and_validates_response():
     assert requests[0][2] == 7
 
 
+def test_http_engine_reads_deployment_base_url(monkeypatch):
+    monkeypatch.setenv("ENGINE_API_BASE", "http://engine:8080/")
+
+    client = HttpReconciliationEngine.from_env()
+
+    assert client.reconcile_url == "http://engine:8080/reconcile"
+
+
 def test_engine_response_rejects_unknown_fields_and_nonfinite_confidence():
     response = _response()
     response["unexpected"] = True
@@ -113,3 +121,13 @@ def test_engine_response_rejects_unknown_fields_and_nonfinite_confidence():
     response["findings"][0]["confidence"] = float("nan")
     with pytest.raises(ValidationError, match="confidence must be finite"):
         ReconciliationResult.model_validate(response)
+
+
+def test_engine_response_accepts_null_action_for_explained_outcome():
+    response = _response()
+    response["findings"][0]["finding_type"] = "EXPLAINED"
+    response["findings"][0]["recommended_action"] = None
+
+    result = ReconciliationResult.model_validate(response)
+
+    assert result.findings[0].recommended_action is None
