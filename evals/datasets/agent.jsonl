@@ -1,6 +1,6 @@
 {"category":"ESCROW_BALANCE_MISMATCH","expected_tools":["calculate_escrow_continuity"]}
 {"category":"PROPERTY_TAX_PROJECTION_MISMATCH","expected_tools":["compare_tax_projection"]}
-{"category":"ESCROW_SHORTAGE_CALCULATION_ERROR","expected_tools":["calculate_payment_breakdown"]}
+{"category":"ESCROW_SHORTAGE_CALCULATION_ERROR","expected_tools":["get_extracted_field"]}
 {"category":"DUPLICATE_TAX_DISBURSEMENT","expected_tools":["get_escrow_ledger"]}
 {"category":"UNEXPLAINED_PAYMENT_INCREASE","expected_tools":["calculate_payment_breakdown"]}
 {"category":"CLEAN","expected_tools":[]}

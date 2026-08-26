@@ -4,14 +4,35 @@ from __future__ import annotations
 
 import argparse
 import math
-from collections.abc import Sequence
+import time
+from collections.abc import Callable, Sequence
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Literal
+from uuid import uuid4
 
+from app.agents import AgentDependencies, build_audit_graph, initial_audit_state
+from app.agents.cli import document_refs, load_account
+from app.agents.documents import PdfDocumentProcessor
+from app.agents.investigator import OpenAIInvestigatorModel
+from app.agents.tracing import TrajectoryEvent
+from app.embeddings import OpenAIEmbeddingClient
+from app.retrieval import PostgresRuleStore, RegulationRetriever, load_corpus
+from app.retrieval.database import managed_database_engine
+from app.retrieval.ingest import ingest_chunks
 from app.schemas.ground_truth import GroundTruthCase
 from app.schemas.mortgage import CanonicalModel
+from app.tools import ToolDependencies
+from app.tools.dependencies import (
+    AuditRecord,
+    InMemoryAuditDataSource,
+    InMemoryMissingInformationSink,
+)
+from app.tools.engine import HttpReconciliationEngine
+from dotenv import load_dotenv
 from pydantic import model_validator
 
 EXPECTED_CASE_COUNT = 300
@@ -80,6 +101,9 @@ class AgentCaseResult:
             else:
                 unnecessary += 1
         return unnecessary
+
+
+Progress = Callable[[int, int, AgentCaseResult], None]
 
 
 @dataclass(frozen=True)
@@ -212,6 +236,120 @@ def category_for(case: GroundTruthCase) -> str:
     return case.expected_findings[0]
 
 
+@dataclass(frozen=True)
+class AgentEvaluationRuntime:
+    accounts_root: Path
+    documents_root: Path
+    regulations: RegulationRetriever
+    engine: HttpReconciliationEngine
+    investigator: OpenAIInvestigatorModel
+    trace_root: Path
+
+    def run_case(
+        self,
+        case: GroundTruthCase,
+        expected_tools: frozenset[str],
+    ) -> AgentCaseResult:
+        trace_path = self.trace_root / f"{case.case_id}.jsonl"
+        started = time.perf_counter()
+        execution_error = None
+        predicted: frozenset[str] = frozenset()
+        steps = 0
+        cost = Decimal(0)
+        review = True
+        try:
+            account = load_account(self.accounts_root, case.account_id)
+            documents = document_refs(self.documents_root, case.case_id, case.account_id)
+            source = InMemoryAuditDataSource(
+                [AuditRecord(audit_id=case.case_id, account=account)],
+                [],
+            )
+            dependencies = AgentDependencies(
+                tools=ToolDependencies(
+                    audit_data=source,
+                    engine=self.engine,
+                    regulations=self.regulations,
+                    missing_information=InMemoryMissingInformationSink(),
+                ),
+                document_store=source,
+                documents=PdfDocumentProcessor(),
+                investigator=self.investigator,
+                trace_root=self.trace_root,
+            )
+            result = build_audit_graph(dependencies).invoke(
+                initial_audit_state(case.case_id, documents),
+                {"configurable": {"thread_id": str(uuid4())}},
+            )
+            predicted = frozenset(
+                finding.finding_type for finding in result["final_findings"]
+            )
+            steps = result["steps_used"]
+            cost = result["cost_usd"]
+            review = bool(result["requires_review"] or "__interrupt__" in result)
+        except Exception as error:  # noqa: BLE001 - preserve the remaining eval cases
+            execution_error = type(error).__name__
+
+        events = load_trajectory(trace_path)
+        if execution_error is not None and events:
+            steps = max(event.steps_used for event in events)
+            cost = max(event.cumulative_cost_usd for event in events)
+        tool_events = [event for event in events if event.event == "tool_call"]
+        latency = Decimal(str(round(time.perf_counter() - started, 6)))
+        return AgentCaseResult(
+            case_id=case.case_id,
+            bucket=case.bucket,
+            expected_findings=frozenset(case.expected_findings),
+            predicted_findings=predicted,
+            expected_tools=expected_tools,
+            tool_calls=tuple(event.tool for event in tool_events if event.tool is not None),
+            steps=steps,
+            cost_usd=cost,
+            latency_seconds=latency,
+            requires_review=review,
+            had_tool_error=any(event.status == "error" for event in tool_events),
+            execution_error=execution_error,
+        )
+
+
+def load_trajectory(path: Path) -> list[TrajectoryEvent]:
+    if not path.is_file():
+        return []
+    events = []
+    for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            events.append(TrajectoryEvent.model_validate_json(line))
+        except ValueError as error:
+            raise ValueError(f"invalid trajectory at {path}:{line_number}") from error
+    return events
+
+
+def execute_cases(
+    cases: Sequence[GroundTruthCase],
+    expectations: dict[str, frozenset[str]],
+    run_case: Callable[[GroundTruthCase, frozenset[str]], AgentCaseResult],
+    *,
+    workers: int,
+    progress: Progress | None = None,
+) -> list[AgentCaseResult]:
+    if workers < 1:
+        raise ValueError("workers must be positive")
+    indexed_results: dict[int, AgentCaseResult] = {}
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = {
+            executor.submit(run_case, case, expectations[category_for(case)]): index
+            for index, case in enumerate(cases)
+        }
+        for completed, future in enumerate(as_completed(futures), start=1):
+            index = futures[future]
+            result = future.result()
+            indexed_results[index] = result
+            if progress is not None:
+                progress(completed, len(cases), result)
+    return [indexed_results[index] for index in range(len(cases))]
+
+
 def calculate_metrics(results: Sequence[AgentCaseResult]) -> AgentEvaluationMetrics:
     if not results:
         raise ValueError("agent evaluation requires at least one result")
@@ -335,17 +473,67 @@ def _parse_args() -> argparse.Namespace:
         default=Path("evals/datasets/agent.jsonl"),
     )
     parser.add_argument("--report", type=Path, default=Path("evals/reports/agent.md"))
+    parser.add_argument("--accounts", type=Path, default=Path("data/accounts"))
+    parser.add_argument("--documents", type=Path, default=Path("data/documents"))
+    parser.add_argument("--corpus", type=Path, default=Path("knowledge-base/chunks.jsonl"))
+    parser.add_argument("--trace-root", type=Path, default=Path("data/traces/agent-eval"))
+    parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--case", action="append", dest="case_ids")
     parser.add_argument("--expected-count", type=int, default=EXPECTED_CASE_COUNT)
     return parser.parse_args()
 
 
 def main() -> None:
+    load_dotenv()
     args = _parse_args()
     cases = load_ground_truth(args.ground_truth)
-    if len(cases) != args.expected_count:
+    if args.case_ids:
+        requested = set(args.case_ids)
+        cases = [case for case in cases if case.case_id in requested]
+        missing = sorted(requested - {case.case_id for case in cases})
+        if missing:
+            raise ValueError(f"unknown requested cases: {missing}")
+    elif len(cases) != args.expected_count:
         raise ValueError(f"expected {args.expected_count} cases; found {len(cases)}")
-    load_tool_expectations(args.dataset)
-    raise SystemExit("agent execution is not wired yet")
+    expectations = load_tool_expectations(args.dataset)
+    trace_root = args.trace_root / datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
+    embeddings = OpenAIEmbeddingClient.from_env()
+    investigator = OpenAIInvestigatorModel.from_env()
+    with managed_database_engine() as database:
+        corpus = load_corpus(args.corpus)
+        ingest_chunks(corpus, embeddings, database)
+        runtime = AgentEvaluationRuntime(
+            accounts_root=args.accounts,
+            documents_root=args.documents,
+            regulations=RegulationRetriever(PostgresRuleStore(database), embeddings),
+            engine=HttpReconciliationEngine.from_env(),
+            investigator=investigator,
+            trace_root=trace_root,
+        )
+        results = execute_cases(
+            cases,
+            expectations,
+            runtime.run_case,
+            workers=args.workers,
+            progress=_print_progress,
+        )
+    metrics = calculate_metrics(results)
+    report = render_report(metrics, model=investigator.model)
+    write_report(args.report, report)
+    print(report)
+    print(f"Trajectories: {trace_root}")
+    print(f"Wrote report to {args.report}")
+
+
+def _print_progress(completed: int, total: int, result: AgentCaseResult) -> None:
+    outcome = "ok" if result.task_succeeded else "miss"
+    if result.execution_error:
+        outcome = f"error:{result.execution_error}"
+    print(
+        f"[{completed:03d}/{total:03d}] {result.case_id} {outcome} "
+        f"steps={result.steps} cost=${result.cost_usd:.6f}",
+        flush=True,
+    )
 
 
 if __name__ == "__main__":

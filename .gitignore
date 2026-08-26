@@ -25,6 +25,7 @@ data/accounts/*.json
 data/documents/**/*.pdf
 data/ground_truth/*.jsonl
 data/traces/*.jsonl
+data/traces/**/*.jsonl
 
 # Editors and operating systems
 .idea/

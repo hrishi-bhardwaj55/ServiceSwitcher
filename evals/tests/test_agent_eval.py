@@ -6,8 +6,10 @@ import pytest
 from evals.runners.agent_eval import (
     AgentCaseResult,
     calculate_metrics,
+    execute_cases,
     load_ground_truth,
     load_tool_expectations,
+    load_trajectory,
     render_report,
 )
 
@@ -54,6 +56,9 @@ def test_agent_dataset_covers_every_finding_category_and_clean():
     assert expectations["CLEAN"] == frozenset()
     assert expectations["PROPERTY_TAX_PROJECTION_MISMATCH"] == {
         "compare_tax_projection"
+    }
+    assert expectations["ESCROW_SHORTAGE_CALCULATION_ERROR"] == {
+        "get_extracted_field"
     }
 
 
@@ -145,3 +150,44 @@ def test_report_states_direct_scoring_and_operational_metrics():
     assert "Exact tool-set accuracy | 100.00%" in report
     assert "Failure recovery rate | n/a" in report
     assert "Model cost per audit (mean) | $0.000000" in report
+
+
+def test_execute_cases_applies_category_expectations_and_preserves_order():
+    cases = load_ground_truth(ROOT / "data" / "ground_truth" / "cases.jsonl")[:2]
+    expectations = load_tool_expectations(ROOT / "evals" / "datasets" / "agent.jsonl")
+
+    def run_case(case, expected_tools):
+        return _result(
+            case.case_id,
+            case.bucket,
+            case.expected_findings,
+            case.expected_findings,
+            expected_tools,
+            expected_tools,
+        )
+
+    results = execute_cases(cases, expectations, run_case, workers=2)
+
+    assert [result.case_id for result in results] == [case.case_id for case in cases]
+    assert all(result.tool_selection_correct for result in results)
+
+
+def test_trajectory_loader_validates_jsonl(tmp_path):
+    path = tmp_path / "CASE-1.jsonl"
+    path.write_text(
+        '{"timestamp":"2026-01-01T00:00:00Z","audit_id":"CASE-1",'
+        '"event":"tool_call","finding_type":"A","status":"ok",'
+        '"tool":"get_extracted_field","arguments":{},"result_summary":"ok",'
+        '"input_tokens":1,"output_tokens":1,"cost_usd":"0.1",'
+        '"cumulative_cost_usd":"0.1","steps_used":1}\n',
+        encoding="utf-8",
+    )
+
+    events = load_trajectory(path)
+
+    assert len(events) == 1
+    assert events[0].tool == "get_extracted_field"
+
+    path.write_text("not-json\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="invalid trajectory"):
+        load_trajectory(path)
