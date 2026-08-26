@@ -82,6 +82,7 @@ class AgentCaseResult:
     latency_seconds: Decimal
     requires_review: bool
     had_tool_error: bool
+    had_model_error: bool
     execution_error: str | None = None
 
     @property
@@ -120,11 +121,13 @@ class AgentEvaluationMetrics:
     tricky_false_positive_cases: int
     successful_cases: int
     correct_tool_selection_cases: int
+    faulted_correct_tool_selection_cases: int
     total_unnecessary_tool_calls: int
     total_steps: int
     step_values: tuple[int, ...]
     recovery_opportunities: int
     recovered_cases: int
+    model_error_cases: int
     total_cost_usd: Decimal
     latency_values: tuple[Decimal, ...]
     review_cases: int
@@ -162,6 +165,10 @@ class AgentEvaluationMetrics:
     @property
     def tool_selection_accuracy(self) -> Decimal:
         return _ratio(self.correct_tool_selection_cases, self.total_cases)
+
+    @property
+    def faulted_tool_selection_accuracy(self) -> Decimal:
+        return _ratio(self.faulted_correct_tool_selection_cases, self.faulted_cases)
 
     @property
     def unnecessary_tool_calls_per_run(self) -> Decimal:
@@ -313,6 +320,10 @@ class AgentEvaluationRuntime:
             latency_seconds=latency,
             requires_review=review,
             had_tool_error=any(event.status == "error" for event in tool_events),
+            had_model_error=any(
+                event.event == "model_resolution" and event.status == "error"
+                for event in events
+            ),
             execution_error=execution_error,
         )
 
@@ -387,11 +398,15 @@ def calculate_metrics(results: Sequence[AgentCaseResult]) -> AgentEvaluationMetr
         tricky_false_positive_cases=sum(bool(result.predicted_findings) for result in tricky),
         successful_cases=sum(result.task_succeeded for result in results),
         correct_tool_selection_cases=sum(result.tool_selection_correct for result in results),
+        faulted_correct_tool_selection_cases=sum(
+            result.tool_selection_correct for result in results if result.bucket == "faulted"
+        ),
         total_unnecessary_tool_calls=sum(result.unnecessary_tool_calls for result in results),
         total_steps=sum(result.steps for result in results),
         step_values=tuple(result.steps for result in results),
         recovery_opportunities=len(recoveries),
         recovered_cases=sum(result.task_succeeded for result in recoveries),
+        model_error_cases=sum(result.had_model_error for result in results),
         total_cost_usd=sum((result.cost_usd for result in results), Decimal(0)),
         latency_values=tuple(result.latency_seconds for result in results),
         review_cases=sum(result.requires_review for result in results),
@@ -401,9 +416,12 @@ def calculate_metrics(results: Sequence[AgentCaseResult]) -> AgentEvaluationMetr
 
 def render_report(metrics: AgentEvaluationMetrics, *, model: str) -> str:
     recovery = (
-        "n/a (no tool errors observed)"
+        "n/a (0 tool-error cases)"
         if metrics.failure_recovery_rate is None
-        else _percent(metrics.failure_recovery_rate)
+        else (
+            f"{_percent(metrics.failure_recovery_rate)} "
+            f"({metrics.recovered_cases}/{metrics.recovery_opportunities})"
+        )
     )
     return f"""# End-to-end investigator evaluation
 
@@ -431,9 +449,11 @@ execution failures.
 | Metric | Result |
 |---|---:|
 | Exact tool-set accuracy | {_percent(metrics.tool_selection_accuracy)} |
+| Exact tool-set accuracy, faulted cases | {_percent(metrics.faulted_tool_selection_accuracy)} |
 | Unnecessary tool calls per run | {metrics.unnecessary_tool_calls_per_run:.3f} |
 | Average / p95 steps | {metrics.average_steps:.3f} / {metrics.p95_steps} |
 | Failure recovery rate | {recovery} |
+| Fail-closed model-error cases | {metrics.model_error_cases} |
 | Human-review rate | {_percent(metrics.review_rate)} |
 | Model cost per audit (mean) | ${metrics.average_cost_usd:.6f} |
 | Latency p50 / p95 | {metrics.p50_latency_seconds:.3f}s / {metrics.p95_latency_seconds:.3f}s |

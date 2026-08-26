@@ -29,6 +29,7 @@ def _result(
     latency="1",
     review=False,
     tool_error=False,
+    model_error=False,
     execution_error=None,
 ):
     return AgentCaseResult(
@@ -43,6 +44,7 @@ def _result(
         latency_seconds=Decimal(latency),
         requires_review=review,
         had_tool_error=tool_error,
+        had_model_error=model_error,
         execution_error=execution_error,
     )
 
@@ -120,11 +122,13 @@ def test_metrics_score_findings_tools_recovery_cost_and_percentiles():
     assert metrics.clean_false_positive_rate == Decimal("0.5")
     assert metrics.tricky_false_positive_rate == Decimal(1)
     assert metrics.tool_selection_accuracy == Decimal("0.5")
+    assert metrics.faulted_tool_selection_accuracy == Decimal("0.5")
     assert metrics.total_unnecessary_tool_calls == 3
     assert metrics.unnecessary_tool_calls_per_run == Decimal("0.75")
     assert metrics.average_steps == Decimal("1.25")
     assert metrics.p95_steps == 3
     assert metrics.failure_recovery_rate == Decimal(1)
+    assert metrics.model_error_cases == 0
     assert metrics.average_cost_usd == Decimal("0.015")
     assert metrics.p50_latency_seconds == Decimal(2)
     assert metrics.p95_latency_seconds == Decimal(4)
@@ -148,7 +152,8 @@ def test_report_states_direct_scoring_and_operational_metrics():
 
     assert "no LLM judge is used" in report
     assert "Exact tool-set accuracy | 100.00%" in report
-    assert "Failure recovery rate | n/a" in report
+    assert "Failure recovery rate | n/a (0 tool-error cases)" in report
+    assert "Fail-closed model-error cases | 0" in report
     assert "Model cost per audit (mean) | $0.000000" in report
 
     fault_only = calculate_metrics(
