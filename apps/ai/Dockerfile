@@ -5,10 +5,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /service
 
-COPY pyproject.toml ./
-COPY app ./app
-COPY alembic.ini ./
-COPY alembic ./alembic
+COPY apps/ai/pyproject.toml ./
+COPY apps/ai/app ./app
+COPY apps/ai/alembic.ini ./
+COPY apps/ai/alembic ./alembic
+COPY knowledge-base/chunks.jsonl ./knowledge-base/chunks.jsonl
+COPY knowledge-base/demo-embeddings.jsonl ./knowledge-base/demo-embeddings.jsonl
 
 RUN pip install --no-cache-dir .
 

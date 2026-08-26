@@ -35,8 +35,10 @@ services:
       start_period: 10s
 
   ai:
+    image: servicerswitch-ai:local
     build:
-      context: ./apps/ai
+      context: .
+      dockerfile: apps/ai/Dockerfile
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://servicerswitch:servicerswitch@postgres:5432/servicerswitch}
       ENGINE_API_BASE: ${ENGINE_API_BASE:-http://engine:8080}
@@ -69,6 +71,25 @@ services:
       timeout: 3s
       retries: 12
       start_period: 10s
+
+  demo-init:
+    image: servicerswitch-ai:local
+    build:
+      context: .
+      dockerfile: apps/ai/Dockerfile
+    profiles: ["demo"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://servicerswitch:servicerswitch@postgres:5432/servicerswitch}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command:
+      - sh
+      - -c
+      - >-
+        python -m alembic -c alembic.ini upgrade head &&
+        python -m app.retrieval.seed_demo
+    restart: "no"
 
   web:
     build:
