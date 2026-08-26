@@ -9,7 +9,8 @@ is merged to `main`.
 | C0 — domain model | Complete | Hand-computable escrow and payment examples documented; tag `c0-done` |
 | C1 — repository skeleton | Complete | Full local verification passed; four Compose services healthy; tag `c1-done` |
 | C2 — synthetic account generator | Complete | Deterministic generation and independent validation pass for 300/300 accounts; property and mutation tests pass; tag `c2-done` |
-| C3–C16 | Not started | Mandatory chunk order preserved |
+| C3 — fault injection and ground truth | Complete | 200 single-fault, 60 clean, and 40 clean-but-tricky cases validate 300/300; tag `c3-done` |
+| C4–C16 | Not started | Mandatory chunk order preserved |
 
 ## Durable decisions
 
@@ -29,3 +30,8 @@ is merged to `main`.
 - Clean accounts include an explicit zero-dollar transfer marker. The old- and
   new-servicer analyses use the same marker balance, making transfer continuity
   directly testable without inventing an off-ledger opening balance.
+- Every C3 fault injector is a pure transformation. It preserves non-target
+  calculations so the structured-data oracle observes exactly one finding with an
+  exact total and monthly impact.
+- C3 ground truth is JSONL with decimal-string impacts, matching the canonical
+  account serialization and avoiding cross-runtime binary-float ambiguity.

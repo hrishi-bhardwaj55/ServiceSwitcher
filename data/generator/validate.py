@@ -17,6 +17,13 @@ TWELVE = Decimal(12)
 VALID_TAX_MONTHS = {(12,), (6, 12), (3, 6, 9, 12)}
 
 
+@dataclass(frozen=True)
+class AnnualEscrowPlan:
+    tax_total: Decimal
+    insurance_total: Decimal
+    charges: tuple[tuple[int, Decimal], ...]
+
+
 def _money(value: Decimal | int) -> Decimal:
     return Decimal(value).quantize(CENT, rounding=ROUND_HALF_UP)
 
@@ -76,23 +83,38 @@ def _analysis_expected_values(
     tax_due_months: tuple[int, ...],
     insurance_due_month: int,
 ) -> tuple[Decimal, Decimal, Decimal, Decimal]:
-    monthly_escrow = _money(
-        (analysis.projected_annual_tax + analysis.projected_annual_insurance) / TWELVE
-    )
     tax_installments = _split_money(
         analysis.projected_annual_tax,
         len(tax_due_months),
     )
-    tax_by_month = dict(zip(tax_due_months, tax_installments, strict=True))
+    charges = [
+        (month, amount)
+        for month, amount in zip(tax_due_months, tax_installments, strict=True)
+    ]
+    charges.append((insurance_due_month, analysis.projected_annual_insurance))
+    return _analysis_expected_values_for_charges(
+        analysis,
+        principal_and_interest,
+        charges,
+    )
+
+
+def _analysis_expected_values_for_charges(
+    analysis: EscrowAnalysis,
+    principal_and_interest: Decimal,
+    charges: list[tuple[int, Decimal]] | tuple[tuple[int, Decimal], ...],
+) -> tuple[Decimal, Decimal, Decimal, Decimal]:
+    monthly_escrow = _money(
+        (analysis.projected_annual_tax + analysis.projected_annual_insurance) / TWELVE
+    )
     balance = analysis.current_balance
     low_balance = balance
 
     for month in _projection_months(analysis.analysis_date):
         balance = _money(balance + monthly_escrow)
-        if month.month in tax_by_month:
-            balance = _money(balance - tax_by_month[month.month])
-        if month.month == insurance_due_month:
-            balance = _money(balance - analysis.projected_annual_insurance)
+        for due_month, amount in charges:
+            if month.month == due_month:
+                balance = _money(balance - amount)
         low_balance = min(low_balance, balance)
 
     cushion = _money(
@@ -237,33 +259,36 @@ def _validate_deposits(account: MortgageAccount, errors: list[str]) -> None:
             errors.append(f"deposit[{index}] amount does not match payment escrow")
 
 
-def _validate_bills(account: MortgageAccount, errors: list[str]) -> tuple[int, ...] | None:
-    if len(account.tax_bills) != 2 or {bill.tax_year for bill in account.tax_bills} != {
-        2024,
-        2025,
-    }:
-        errors.append("tax_bills must contain 2024 and 2025 bills")
+def _validate_bills(
+    account: MortgageAccount,
+    errors: list[str],
+) -> dict[int, AnnualEscrowPlan] | None:
+    tax_years = {bill.tax_year for bill in account.tax_bills}
+    if tax_years != {2024, 2025}:
+        errors.append("tax_bills must cover 2024 and 2025")
         return None
-
-    tax_patterns = {
-        tuple(due_date.month for due_date in bill.due_dates) for bill in account.tax_bills
-    }
-    if len(tax_patterns) != 1 or next(iter(tax_patterns)) not in VALID_TAX_MONTHS:
-        errors.append("tax bills must share an annual, semiannual, or quarterly schedule")
+    if not account.payments:
+        errors.append("payment history is required to validate disbursements")
         return None
-    tax_due_months = next(iter(tax_patterns))
 
     history_end = _add_months(account.payments[-1].date, 1) - timedelta(days=1)
     expected_tax: list[tuple[date, Decimal, str]] = []
+    tax_charges: dict[int, list[tuple[int, Decimal]]] = {2024: [], 2025: []}
+    tax_totals: dict[int, Decimal] = {2024: Decimal("0.00"), 2025: Decimal("0.00")}
     for bill in account.tax_bills:
-        if not Decimal("2400.00") <= bill.annual_amount <= Decimal("14000.00"):
-            errors.append(f"{bill.tax_year} annual tax is outside $2,400-$14,000")
         if any(due_date.year != bill.tax_year for due_date in bill.due_dates):
             errors.append(f"{bill.tax_year} tax due date has the wrong year")
         installments = _split_money(bill.annual_amount, len(bill.due_dates))
+        tax_totals[bill.tax_year] = _money(
+            tax_totals[bill.tax_year] + bill.annual_amount
+        )
         for due_date, installment in zip(bill.due_dates, installments, strict=True):
+            tax_charges[bill.tax_year].append((due_date.month, installment))
             if account.origination_date <= due_date <= history_end:
                 expected_tax.append((due_date, -installment, bill.authority))
+    for year, annual_total in tax_totals.items():
+        if not Decimal("2400.00") <= annual_total <= Decimal("14000.00"):
+            errors.append(f"{year} total annual tax is outside $2,400-$14,000")
 
     actual_tax = [
         (transaction.date, transaction.amount, transaction.payee or "")
@@ -273,20 +298,36 @@ def _validate_bills(account: MortgageAccount, errors: list[str]) -> tuple[int, .
     if actual_tax != sorted(expected_tax):
         errors.append("tax disbursements do not exactly match scheduled due dates and amounts")
 
-    if len(account.insurance_policies) != 2:
-        errors.append("insurance_policies must contain two annual policies")
-        return tax_due_months
+    policies_by_year = {
+        year: [
+            policy
+            for policy in account.insurance_policies
+            if policy.renewal_date.year == year
+        ]
+        for year in (2024, 2025)
+    }
+    if any(len(policies) != 1 for policies in policies_by_year.values()):
+        errors.append("insurance_policies must contain one policy for 2024 and 2025")
+        return None
 
     expected_insurance: list[tuple[date, Decimal, str]] = []
-    renewal_months = {policy.renewal_date.month for policy in account.insurance_policies}
-    premiums = {policy.annual_premium for policy in account.insurance_policies}
-    for policy in account.insurance_policies:
+    plans: dict[int, AnnualEscrowPlan] = {}
+    for year, policies in policies_by_year.items():
+        policy = policies[0]
         if not Decimal("900.00") <= policy.annual_premium <= Decimal("4200.00"):
             errors.append("annual insurance premium is outside $900-$4,200")
         if account.origination_date <= policy.renewal_date <= history_end:
             expected_insurance.append(
                 (policy.renewal_date, -policy.annual_premium, policy.carrier)
             )
+        plans[year] = AnnualEscrowPlan(
+            tax_total=tax_totals[year],
+            insurance_total=policy.annual_premium,
+            charges=(
+                *tax_charges[year],
+                (policy.renewal_date.month, policy.annual_premium),
+            ),
+        )
     actual_insurance = [
         (transaction.date, transaction.amount, transaction.payee or "")
         for transaction in account.escrow_ledger
@@ -296,24 +337,20 @@ def _validate_bills(account: MortgageAccount, errors: list[str]) -> tuple[int, .
         errors.append(
             "insurance disbursements do not exactly match renewal dates and premiums"
         )
-    if len(renewal_months) != 1 or len(premiums) != 1:
-        errors.append("insurance schedule and annual premium must remain consistent")
-    return tax_due_months
+    return plans
 
 
 def _validate_analysis_values(
     analysis: EscrowAnalysis,
     principal_and_interest: Decimal,
-    tax_due_months: tuple[int, ...],
-    insurance_due_month: int,
+    charges: tuple[tuple[int, Decimal], ...],
     errors: list[str],
     label: str,
 ) -> None:
-    monthly, shortage, shortage_monthly, total = _analysis_expected_values(
+    monthly, shortage, shortage_monthly, total = _analysis_expected_values_for_charges(
         analysis,
         principal_and_interest,
-        tax_due_months,
-        insurance_due_month,
+        charges,
     )
     comparisons = {
         "stated_monthly_escrow": (analysis.stated_monthly_escrow, monthly),
@@ -333,10 +370,10 @@ def _validate_transfer_and_analyses(
     account: MortgageAccount,
     transfer_date: date | None,
     principal_and_interest: Decimal,
-    tax_due_months: tuple[int, ...] | None,
+    annual_plans: dict[int, AnnualEscrowPlan] | None,
     errors: list[str],
 ) -> None:
-    if transfer_date is None or tax_due_months is None:
+    if transfer_date is None or annual_plans is None:
         return
     if len(account.escrow_analyses) != 3:
         errors.append(f"expected three escrow analyses; found {len(account.escrow_analyses)}")
@@ -390,24 +427,21 @@ def _validate_transfer_and_analyses(
     if old_transfer.current_balance != new_transfer.current_balance:
         errors.append("escrow balance is discontinuous across servicing transfer")
 
-    tax_by_year = {bill.tax_year: bill.annual_amount for bill in account.tax_bills}
-    annual_insurance = account.insurance_policies[0].annual_premium
-    expected_projections = [tax_by_year[2024], tax_by_year[2024], tax_by_year[2025]]
-    for label, analysis, expected_tax in zip(
+    expected_plans = [annual_plans[2024], annual_plans[2024], annual_plans[2025]]
+    for label, analysis, plan in zip(
         ("initial analysis", "old transfer analysis", "new transfer analysis"),
         account.escrow_analyses,
-        expected_projections,
+        expected_plans,
         strict=True,
     ):
-        if analysis.projected_annual_tax != expected_tax:
+        if analysis.projected_annual_tax != plan.tax_total:
             errors.append(f"{label} projected tax does not match the applicable bill")
-        if analysis.projected_annual_insurance != annual_insurance:
+        if analysis.projected_annual_insurance != plan.insurance_total:
             errors.append(f"{label} projected insurance does not match the policy")
         _validate_analysis_values(
             analysis,
             principal_and_interest,
-            tax_due_months,
-            account.insurance_policies[0].renewal_date.month,
+            plan.charges,
             errors,
             label,
         )
@@ -432,12 +466,12 @@ def validate_account(account: MortgageAccount) -> list[str]:
     transfer_date = _validate_servicing(account, errors)
     errors.extend(validate_ledger_chain(account.escrow_ledger))
     _validate_deposits(account, errors)
-    tax_due_months = _validate_bills(account, errors)
+    annual_plans = _validate_bills(account, errors)
     _validate_transfer_and_analyses(
         account,
         transfer_date,
         principal_and_interest,
-        tax_due_months,
+        annual_plans,
         errors,
     )
     return errors

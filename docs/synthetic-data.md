@@ -32,6 +32,10 @@ idempotent and byte-for-byte stable. The writer uses an atomic replacement for e
 file and removes only stale files matching `account-*.json` in the selected output
 directory.
 
+`make inject-faults` first regenerates this clean source corpus and then replaces the
+files in `data/accounts/` with the labeled C3 case accounts. Run
+`make generate-accounts` again whenever a pristine C2 corpus is needed.
+
 ## Corpus shape
 
 Every account contains:

@@ -39,18 +39,38 @@ def projected_low_balance(
 ) -> Decimal:
     """Project the lowest month-end balance in the next twelve months."""
 
-    months = projection_months(analysis_date)
     tax_installments = split_money(annual_tax, len(tax_due_months))
-    tax_by_month = dict(zip(tax_due_months, tax_installments, strict=True))
+    charges = [
+        (month, amount)
+        for month, amount in zip(tax_due_months, tax_installments, strict=True)
+    ]
+    charges.append((insurance_due_month, annual_insurance))
+    return projected_low_balance_for_charges(
+        current_balance=current_balance,
+        monthly_escrow=monthly_escrow,
+        charges=charges,
+        analysis_date=analysis_date,
+    )
+
+
+def projected_low_balance_for_charges(
+    *,
+    current_balance: Decimal,
+    monthly_escrow: Decimal,
+    charges: list[tuple[int, Decimal]],
+    analysis_date: date,
+) -> Decimal:
+    """Project the low balance for an explicit recurring annual charge schedule."""
+
+    months = projection_months(analysis_date)
     balance = money(current_balance)
     low_balance = balance
 
     for month in months:
         balance = money(balance + monthly_escrow)
-        if month.month in tax_by_month:
-            balance = money(balance - tax_by_month[month.month])
-        if month.month == insurance_due_month:
-            balance = money(balance - annual_insurance)
+        for due_month, amount in charges:
+            if month.month == due_month:
+                balance = money(balance - amount)
         low_balance = min(low_balance, balance)
 
     return low_balance
@@ -69,14 +89,40 @@ def build_analysis(
 ) -> EscrowAnalysis:
     """Calculate a RESPA-style aggregate escrow analysis."""
 
-    monthly_escrow = money((annual_tax + annual_insurance) / Decimal(12))
-    low_balance = projected_low_balance(
+    tax_installments = split_money(annual_tax, len(tax_due_months))
+    charges = [
+        (month, amount)
+        for month, amount in zip(tax_due_months, tax_installments, strict=True)
+    ]
+    charges.append((insurance_due_month, annual_insurance))
+    return build_analysis_for_charges(
+        servicer_id=servicer_id,
+        analysis_date=analysis_date,
         current_balance=current_balance,
-        monthly_escrow=monthly_escrow,
         annual_tax=annual_tax,
         annual_insurance=annual_insurance,
-        tax_due_months=tax_due_months,
-        insurance_due_month=insurance_due_month,
+        charges=charges,
+        principal_and_interest=principal_and_interest,
+    )
+
+
+def build_analysis_for_charges(
+    *,
+    servicer_id: str,
+    analysis_date: date,
+    current_balance: Decimal,
+    annual_tax: Decimal,
+    annual_insurance: Decimal,
+    charges: list[tuple[int, Decimal]],
+    principal_and_interest: Decimal,
+) -> EscrowAnalysis:
+    """Calculate an analysis for explicit tax-authority and insurance charges."""
+
+    monthly_escrow = money((annual_tax + annual_insurance) / Decimal(12))
+    low_balance = projected_low_balance_for_charges(
+        current_balance=current_balance,
+        monthly_escrow=monthly_escrow,
+        charges=charges,
         analysis_date=analysis_date,
     )
     cushion = money((annual_tax + annual_insurance) / Decimal(6))

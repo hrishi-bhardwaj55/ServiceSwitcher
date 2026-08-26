@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: up down verify lint-ai test-engine test-ai test-data test-web generate-accounts validate-accounts
+.PHONY: up down verify lint-ai test-engine test-ai test-data test-faults test-web generate-accounts validate-accounts inject-faults validate-ground-truth
 
 up:
 	docker compose up --build -d
@@ -8,11 +8,11 @@ up:
 down:
 	docker compose down
 
-verify: lint-ai test-engine test-ai test-data test-web
+verify: lint-ai test-engine test-ai test-data test-faults test-web
 	@echo "VERIFY OK"
 
 lint-ai:
-	$(PYTHON) -m ruff check apps/ai data/generator
+	$(PYTHON) -m ruff check apps/ai data/generator data/faults
 
 test-engine:
 	cd apps/engine && ./mvnw -B -ntp test
@@ -28,6 +28,15 @@ validate-accounts:
 
 test-data: generate-accounts validate-accounts
 	$(PYTHON) -W error -m pytest -p no:cacheprovider data/generator/tests
+
+inject-faults: generate-accounts
+	$(PYTHON) -m data.faults.inject --input data/accounts --output data/accounts --ground-truth data/ground_truth/cases.jsonl
+
+validate-ground-truth: inject-faults
+	$(PYTHON) -m data.faults.validate --accounts data/accounts --ground-truth data/ground_truth/cases.jsonl
+
+test-faults: validate-ground-truth
+	$(PYTHON) -W error -m pytest -p no:cacheprovider data/faults/tests
 
 test-web:
 	npm --prefix apps/web run typecheck
