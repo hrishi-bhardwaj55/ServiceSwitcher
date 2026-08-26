@@ -8,6 +8,8 @@ from typing import Any
 
 from app.extraction.models import DocumentType
 
+from data.render.content import TemplateFamily
+
 
 def expected_extraction_fields(
     account: dict[str, Any], document_type: DocumentType
@@ -46,6 +48,46 @@ def expected_extraction_fields(
         "annual_tax_amount": Decimal(bill["annual_amount"]),
         "due_dates": tuple(date.fromisoformat(value) for value in bill["due_dates"]),
     }
+
+
+def expected_extraction_pages(
+    document_type: DocumentType, family: TemplateFamily
+) -> dict[str, int]:
+    field_names = {
+        "OLD_SERVICER_STATEMENT": (
+            "principal_balance",
+            "interest_rate",
+            "monthly_payment",
+            "escrow_balance",
+        ),
+        "NEW_SERVICER_STATEMENT": (
+            "principal_balance",
+            "interest_rate",
+            "monthly_payment",
+            "escrow_balance",
+        ),
+        "TRANSFER_NOTICE": (
+            "old_servicer_name",
+            "new_servicer_name",
+            "transfer_date",
+        ),
+        "ESCROW_ANALYSIS": (
+            "projected_annual_tax",
+            "projected_annual_insurance",
+            "stated_shortage",
+        ),
+        "PROPERTY_TAX_BILL": (
+            "tax_authority",
+            "annual_tax_amount",
+            "due_dates",
+        ),
+    }[document_type]
+    if family != TemplateFamily.C:
+        return dict.fromkeys(field_names, 1)
+    pages = dict.fromkeys(field_names, 2)
+    if document_type == "PROPERTY_TAX_BILL":
+        pages["due_dates"] = 1
+    return pages
 
 
 def _statement_fields(
