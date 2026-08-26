@@ -37,21 +37,15 @@ class GetPaymentHistoryArgs(_DateRangeArgs):
 
 
 class CalculateEscrowContinuityArgs(CanonicalModel):
-    """Choose the servicing-transfer date for deterministic continuity analysis."""
-
-    transfer_date: date
+    """Request deterministic continuity analysis for the bound audit's transfer."""
 
 
 class CalculatePaymentBreakdownArgs(CanonicalModel):
-    """Choose the servicing-transfer date for deterministic payment decomposition."""
-
-    transfer_date: date
+    """Request deterministic payment decomposition for the bound audit's transfer."""
 
 
 class CompareTaxProjectionArgs(CanonicalModel):
-    """Choose the servicing-transfer date for deterministic tax comparison."""
-
-    transfer_date: date
+    """Request deterministic tax comparison for the bound audit's transfer."""
 
 
 class SearchRegulationsArgs(CanonicalModel):
