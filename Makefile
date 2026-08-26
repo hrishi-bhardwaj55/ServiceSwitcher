@@ -108,3 +108,4 @@ test-web:
 	npm --prefix apps/web run typecheck
 	npm --prefix apps/web test
 	npm --prefix apps/web run build
+	npm --prefix apps/web run test:e2e
