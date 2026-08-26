@@ -4,8 +4,8 @@ ServicerSwitch is a demoable mortgage-servicing transfer auditor. It combines a
 deterministic financial reconciliation engine with a tool-using AI investigator,
 and requires document-level evidence for every AI-assisted claim.
 
-> Status: C9 complete — the 47-chunk regulation knowledge base is live in pgvector,
-> and hybrid retrieval was selected from a 25-query side-by-side evaluation. See the
+> Status: C10 complete — eight strict agent tools are bound to one framework audit,
+> with per-tool validation, scope, and truncation coverage. See the
 > [implementation ledger](docs/progress.md).
 
 ## Project principles
@@ -33,6 +33,7 @@ and requires document-level evidence for every AI-assisted claim.
 - [Regulation knowledge base](knowledge-base/README.md)
 - [Retrieval evaluation](evals/reports/rag.md)
 - [Measured evaluation decisions](docs/evals.md)
+- [Audit-scoped agent tools](docs/agent-tools.md)
 - [Implementation progress](docs/progress.md)
 
 ## Services
@@ -185,3 +186,17 @@ Vector-only and hybrid retrieval both reached 96.00% Recall@5. Hybrid is the
 production choice because its 0.9200 MRR exceeded vector-only's 0.9000 without
 reducing coverage. Full interpretation and limitations are in
 [the evaluation decision](docs/evals.md).
+
+## Agent tool boundary
+
+The investigator receives eight purpose-built tools rather than general database,
+filesystem, or calculator access. Every registry is bound to one framework-supplied
+audit ID, argument schemas reject model-supplied audit IDs, and oversized responses
+carry an explicit truncation marker. Run the dedicated contract and security suite:
+
+```bash
+make test-tools
+```
+
+See [the tool boundary documentation](docs/agent-tools.md) for the complete surface
+and deployment configuration.
