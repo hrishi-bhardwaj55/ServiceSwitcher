@@ -1,0 +1,66 @@
+{
+  "cases": [
+    {
+      "case_id": "CASE-0001",
+      "account_id": "SS-0001",
+      "bucket": "faulted",
+      "expected_findings": ["ESCROW_BALANCE_MISMATCH"],
+      "expected_impact_total": "75.00"
+    },
+    {
+      "case_id": "CASE-0002",
+      "account_id": "SS-0002",
+      "bucket": "faulted",
+      "expected_findings": ["PROPERTY_TAX_PROJECTION_MISMATCH"],
+      "expected_impact_total": "120.00"
+    },
+    {
+      "case_id": "CASE-0003",
+      "account_id": "SS-0003",
+      "bucket": "clean",
+      "expected_findings": [],
+      "expected_impact_total": "0.00"
+    },
+    {
+      "case_id": "CASE-0004",
+      "account_id": "SS-0004",
+      "bucket": "clean",
+      "expected_findings": [],
+      "expected_impact_total": "0.00"
+    },
+    {
+      "case_id": "CASE-0005",
+      "account_id": "SS-0005",
+      "bucket": "clean_but_tricky",
+      "expected_findings": [],
+      "expected_impact_total": "0.00"
+    }
+  ],
+  "responses": {
+    "SS-0001": {
+      "engine_version": "fixture",
+      "findings": [
+        {"finding_type": "ESCROW_BALANCE_MISMATCH", "difference": "75.00"}
+      ]
+    },
+    "SS-0002": {
+      "engine_version": "fixture",
+      "findings": [
+        {"finding_type": "ESCROW_SHORTAGE_CALCULATION_ERROR", "difference": "130.00"}
+      ]
+    },
+    "SS-0003": {
+      "engine_version": "fixture",
+      "findings": [
+        {"finding_type": "DUPLICATE_TAX_DISBURSEMENT", "difference": "50.00"}
+      ]
+    },
+    "SS-0004": {
+      "engine_version": "fixture",
+      "findings": [
+        {"finding_type": "EXPLAINED", "difference": "1.00"}
+      ]
+    },
+    "SS-0005": {"engine_version": "fixture", "findings": []}
+  }
+}
