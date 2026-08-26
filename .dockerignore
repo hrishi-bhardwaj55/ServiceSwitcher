@@ -1,0 +1,12 @@
+.git
+.github
+.env
+.env.*
+.venv
+apps/engine
+apps/web
+data
+docs
+evals
+**/__pycache__
+**/*.pyc

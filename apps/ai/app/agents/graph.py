@@ -284,6 +284,8 @@ class AuditNodes:
                     break
 
                 tool_call = decision.tool_call
+                if tool_call is None:
+                    raise AssertionError("validated investigator decision has no action")
                 steps += 1
                 invocation = (
                     tool_call.name,

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 
 import type { Evidence } from "@/lib/demo-data";
@@ -56,10 +57,12 @@ export function EvidenceViewer({ evidence }: { evidence: Evidence[] }) {
         <div className="p-4 sm:p-6">
           <div className="relative mx-auto max-w-[42rem] overflow-hidden rounded-sm bg-white shadow-[0_18px_55px_-26px_rgba(15,23,42,0.55)]">
             {/* This PNG is rendered from the checked-in source PDF at 2x resolution. */}
-            <img
+            <Image
               alt={`${selected.document}, page ${selected.page}`}
               className="block h-auto w-full"
+              height={1584}
               src={selected.imageUrl}
+              width={1224}
             />
             <span
               aria-label={`Highlighted evidence: ${selected.value}`}

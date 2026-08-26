@@ -16,24 +16,24 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest
 @AutoConfigureMockMvc
 class ReconcileControllerTest {
-    @Autowired
-    private MockMvc mockMvc;
+  @Autowired private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+  @Autowired private ObjectMapper objectMapper;
 
-    @Test
-    void reconcilesCanonicalSnakeCaseRequest() throws Exception {
-        ReconcileRequest request = new ReconcileRequest(
-                TestAccounts.baseAccount(), TestAccounts.TRANSFER_DATE);
+  @Test
+  void reconcilesCanonicalSnakeCaseRequest() throws Exception {
+    ReconcileRequest request =
+        new ReconcileRequest(TestAccounts.baseAccount(), TestAccounts.TRANSFER_DATE);
 
-        mockMvc.perform(post("/reconcile")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsBytes(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.engine_version").value("1.0.0"))
-                .andExpect(jsonPath("$.payment_decomposition.payment_change").isString())
-                .andExpect(jsonPath("$.payment_decomposition.outcome").exists())
-                .andExpect(jsonPath("$.findings").isArray());
-    }
+    mockMvc
+        .perform(
+            post("/reconcile")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsBytes(request)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.engine_version").value("1.0.0"))
+        .andExpect(jsonPath("$.payment_decomposition.payment_change").isString())
+        .andExpect(jsonPath("$.payment_decomposition.outcome").exists())
+        .andExpect(jsonPath("$.findings").isArray());
+  }
 }

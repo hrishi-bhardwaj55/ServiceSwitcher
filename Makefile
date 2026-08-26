@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: up down verify lint-ai test-engine test-ai test-extraction test-retrieval test-tools test-agent test-data test-faults test-render test-evals test-web generate-accounts validate-accounts inject-faults validate-ground-truth eval-engine render-documents validate-documents check-heldout-isolation eval-extraction-deterministic eval-extraction db-migrate ingest-kb eval-rag run-audit eval-all eval-baseline generate-adversarial eval-adversarial
+.PHONY: up down demo verify lint-ai type-ai lint-engine test-engine test-ai test-extraction test-retrieval test-tools test-agent test-data test-faults test-render test-evals lint-web test-web generate-accounts validate-accounts inject-faults validate-ground-truth eval-engine render-documents validate-documents check-heldout-isolation eval-extraction-deterministic eval-extraction db-migrate ingest-kb eval-rag run-audit eval-all eval-baseline generate-adversarial eval-adversarial
 
 up:
 	docker compose up --build -d
@@ -8,11 +8,25 @@ up:
 down:
 	docker compose down
 
-verify: lint-ai test-engine test-ai test-data test-faults test-render test-evals test-web check-heldout-isolation
+demo:
+	@test -f .env || (echo "Create .env from .env.example and add LLM_API_KEY" && exit 2)
+	@grep -Eq '^LLM_API_KEY=.+$$' .env || (echo "Set LLM_API_KEY in .env" && exit 2)
+	docker compose up --build -d --wait postgres engine
+	docker compose --profile demo run --rm --build demo-init
+	docker compose up --build -d --wait ai web
+	@echo "DEMO READY: http://localhost:3000"
+
+verify: lint-ai type-ai lint-engine test-engine test-ai test-data test-faults test-render test-evals lint-web test-web check-heldout-isolation
 	@echo "VERIFY OK"
 
 lint-ai:
 	$(PYTHON) -m ruff check apps/ai data/generator data/faults data/render evals
+
+type-ai:
+	$(PYTHON) -m mypy apps/ai/app
+
+lint-engine:
+	cd apps/engine && ./mvnw -B -ntp spotless:check checkstyle:check
 
 test-engine:
 	cd apps/engine && ./mvnw -B -ntp test
@@ -109,3 +123,6 @@ test-web:
 	npm --prefix apps/web test
 	npm --prefix apps/web run build
 	npm --prefix apps/web run test:e2e
+
+lint-web:
+	npm --prefix apps/web run lint

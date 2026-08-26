@@ -9,14 +9,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/reconcile")
 public class ReconcileController {
-    private final ReconciliationService service;
+  private final ReconciliationService service;
 
-    public ReconcileController(ReconciliationService service) {
-        this.service = service;
-    }
+  public ReconcileController(ReconciliationService service) {
+    this.service = service;
+  }
 
-    @PostMapping
-    public ReconcileResponse reconcile(@RequestBody ReconcileRequest request) {
-        return service.reconcile(request);
-    }
+  @PostMapping
+  public ReconcileResponse reconcile(@RequestBody ReconcileRequest request) {
+    return service.reconcile(request);
+  }
 }

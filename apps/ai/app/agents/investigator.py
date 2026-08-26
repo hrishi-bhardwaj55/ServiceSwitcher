@@ -193,8 +193,10 @@ class OpenAIInvestigatorModel:
             raise RuntimeError("AGENT_API_KEY or LLM_API_KEY is required")
         return cls(
             api_key=api_key,
-            model=os.getenv("AGENT_MODEL") or os.getenv("LLM_MODEL", DEFAULT_MODEL),
-            api_base=os.getenv("AGENT_API_BASE") or os.getenv("LLM_API_BASE", DEFAULT_API_BASE),
+            model=os.getenv("AGENT_MODEL") or os.getenv("LLM_MODEL") or DEFAULT_MODEL,
+            api_base=os.getenv("AGENT_API_BASE")
+            or os.getenv("LLM_API_BASE")
+            or DEFAULT_API_BASE,
         )
 
     def estimate_max_cost(
@@ -321,11 +323,19 @@ def _parse_response(response: Mapping[str, object]) -> InvestigatorDecision:
 
 def _parse_usage(usage: Mapping[str, object]) -> ModelUsage:
     details = usage.get("input_tokens_details")
+    input_tokens = usage.get("input_tokens")
+    output_tokens = usage.get("output_tokens")
     cached = details.get("cached_tokens", 0) if isinstance(details, Mapping) else 0
+    if not isinstance(input_tokens, int) or isinstance(input_tokens, bool):
+        raise ValueError("investigator usage input_tokens must be an integer")
+    if not isinstance(output_tokens, int) or isinstance(output_tokens, bool):
+        raise ValueError("investigator usage output_tokens must be an integer")
+    if not isinstance(cached, int) or isinstance(cached, bool):
+        raise ValueError("investigator usage cached_tokens must be an integer")
     return ModelUsage(
-        input_tokens=usage.get("input_tokens", -1),
+        input_tokens=input_tokens,
         cached_input_tokens=cached,
-        output_tokens=usage.get("output_tokens", -1),
+        output_tokens=output_tokens,
     )
 
 

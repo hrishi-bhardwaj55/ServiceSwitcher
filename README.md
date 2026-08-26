@@ -1,329 +1,186 @@
 # ServicerSwitch
 
-ServicerSwitch is a demoable mortgage-servicing transfer auditor. It combines a
-deterministic financial reconciliation engine with a tool-using AI investigator,
-and requires document-level evidence for every AI-assisted claim.
-
-> Status: C15 complete — the evaluated system is available as a four-screen,
-> evidence-first browser demo with a tested phone layout. See the
-> [implementation ledger](docs/progress.md).
-
-## Project principles
-
-- Financial arithmetic, comparisons, and duplicate detection are deterministic.
-- AI is reserved for document understanding, ambiguity resolution, and explanation.
-- Findings cite a document, page, field, and value.
-- Synthetic ground truth and held-out document layouts measure false positives as
-  well as recall.
-- The product provides audit information, not legal conclusions.
-
-## Documentation
-
-- [Build specification](servicerswitch_v1_spec.md)
-- [Mortgage and escrow domain model](docs/domain-model.md)
-- [Synthetic account generation](docs/synthetic-data.md)
-- [Fault injection and ground truth](docs/fault-injection.md)
-- [Deterministic reconciliation engine](docs/reconciliation-engine.md)
-- [Deterministic engine evaluation](evals/reports/engine.md)
-- [Synthetic document rendering](docs/document-rendering.md)
-- [Deterministic PDF extraction](docs/deterministic-extraction.md)
-- [Model-backed extraction fallback](docs/llm-extraction-fallback.md)
-- [Model-backed extraction evaluation](evals/reports/extraction.md)
-- [Extraction confidence calibration](evals/reports/calibration.md)
-- [Regulation knowledge base](knowledge-base/README.md)
-- [Retrieval evaluation](evals/reports/rag.md)
-- [End-to-end investigator evaluation](evals/reports/agent.md)
-- [Naive long-context baseline](evals/reports/baseline.md)
-- [Agent versus baseline comparison](evals/reports/comparison.md)
-- [Adversarial document evaluation](evals/reports/adversarial.md)
-- [Adversarial security boundary](docs/adversarial-security.md)
-- [Web demo and evidence viewer](docs/web-demo.md)
-- [Measured evaluation decisions](docs/evals.md)
-- [Audit-scoped agent tools](docs/agent-tools.md)
-- [Investigator agent](docs/investigator-agent.md)
-- [Implementation progress](docs/progress.md)
-
 ## Measured results
 
-| Evaluation | Corpus | Key result |
-|---|---:|---|
-| Deterministic engine | 300 accounts | 100% precision / recall / F1; 0% clean false positives |
-| Model-backed extraction | 1,500 PDFs | A/B 100% fields; held-out C 93.04% fields and 78.14% page citations |
-| Hybrid regulation retrieval | 25 queries | 96.00% Recall@5; 0.9200 MRR |
-| End-to-end investigator | 300 audits | 100% finding F1; 0% clean/tricky false positives; 40% automated task success |
-| Naive long-context baseline | 300 audits | 25.95% finding F1; 75.00% clean FPR; 87.50% tricky FPR |
-| Adversarial documents | 20 PDFs | 20/20 expected behaviors; 0/12 prompt-injection success |
+| Metric | System | Naive baseline |
+|---|---:|---:|
+| Document classification, held-out family | 100.00% | n/a |
+| Field extraction, in-distribution | 100.00% | n/a |
+| Field extraction, held-out family | 93.04% | n/a |
+| Finding precision | 100.00% | 20.28% |
+| Finding recall | 100.00% | 36.00% |
+| False-positive rate, clean | 0.00% | 75.00% |
+| False-positive rate, clean-but-tricky | 0.00% | 87.50% |
+| Retrieval Recall@5 | 96.00% | n/a |
+| Page-citation accuracy, held-out family | 78.14% | n/a |
+| Automated agent task success | 40.00% | n/a |
+| Exact tool selection, faulted cases | 55.00% | n/a |
+| Prompt-injection success rate | 0/12 (0.00%) | not evaluated |
+| Mean model cost per audit | $0.001730 | $0.003795 |
+| Local latency, p50 / p95 | 2.320s / 5.632s | 3.624s / 7.721s |
 
-## Services
+`n = 300` synthetic accounts: 200 faulted, 60 clean, and 40
+clean-but-tricky. Extraction used 1,500 PDFs across two development layouts and one
+structurally held-out family. The adversarial result uses a separate fixed set of 20
+PDFs. Correctness is scored directly against generated ground truth; no LLM judge is
+used. Cost columns are not whole-system parity: system cost covers investigator
+tokens, while baseline cost covers its single full-document call. See the
+[evaluation methodology](docs/evals.md) before interpreting the numbers.
 
-- `apps/engine`: stateless Java 21 / Spring Boot 3 reconciliation service on port
-  `8080`, exposing `POST /reconcile`
-- `apps/ai`: Python 3.12 / FastAPI extraction and investigation service on port
-  `8000`
-- `apps/web`: Next.js 15 audit interface on port `3000`
-- `postgres`: PostgreSQL 16 with pgvector on port `5432`
+## The 30-second explanation
 
-## Quickstart
+ServicerSwitch audits a synthetic mortgage-servicing transfer. A Python service
+extracts typed values and preserves page provenance; a separate stateless Java
+service performs every financial calculation and emits reproducible findings. A
+bounded agent investigates only ambiguous findings through eight audit-scoped tools.
+The browser then shows the payment decomposition, the actual source-PDF page with
+the cited value highlighted, relevant CFPB guidance, and an editable action draft.
+When evidence or model behavior is uncertain, the system preserves the finding and
+routes it to review instead of guessing.
 
-Docker is the only runtime prerequisite for the service foundation:
+## Five-minute quickstart
+
+Prerequisites are Docker Desktop, Docker Compose, GNU Make, Git, and one supported
+provider API key. Ports `3000`, `5432`, `8000`, and `8080` must be available.
 
 ```bash
+git clone https://github.com/hrishi-bhardwaj55/ServiceSwitcher.git
+cd ServiceSwitcher
 cp .env.example .env
-docker compose up --build -d
-curl -fsS http://localhost:3000
-curl -fsS http://localhost:8080/health
-curl -fsS http://localhost:8000/health
+# Set LLM_API_KEY in .env; keep LLM_MODEL=gpt-5.4-mini
+make demo
 ```
 
-The API health endpoints return typed JSON such as
-`{"service":"engine","status":"ok"}`. Stop the stack without removing its database
-volume:
+PowerShell users can replace `cp` with `Copy-Item .env.example .env`. Open
+`http://localhost:3000`, select **Tax projection error**, and click **Start audit**.
+
+`make demo` builds the containers, waits for PostgreSQL and the deterministic engine,
+applies migrations, seeds the 47 measured regulation chunks from checked-in C9
+vectors without a paid provider call, then waits for the AI and web health checks.
+It prints `DEMO READY` only after all four services are healthy. The key remains
+available to model-backed audit commands; the pre-built browser scenario itself does
+not make an outbound model request.
+
+Stop the stack without deleting its database volume:
 
 ```bash
-docker compose down
+make down
 ```
+
+## Architecture
+
+```mermaid
+flowchart LR
+    U[Homeowner / demo user] --> W[Next.js evidence UI]
+    W --> A["Python AI service<br/>fixed LangGraph control flow"]
+    A --> X["PDF extraction<br/>typed values + provenance"]
+    A --> T[8 audit-scoped tools]
+    T --> J["Java reconciliation engine<br/>stateless deterministic calculator"]
+    T --> P[("PostgreSQL + pgvector<br/>curated rules and audit data")]
+    A -. ambiguous finding only .-> L[One model tier]
+    L -. proposed action .-> T
+    J --> F["Reproducible findings<br/>and payment decomposition"]
+    X --> E[Document · page · field · value]
+    F --> W
+    E --> W
+```
+
+The Java boundary owns arithmetic, date comparisons, tolerances, and duplicate
+detection. It has no database or model dependency. The Python service owns document
+understanding, retrieval, orchestration, evidence validation, budgets, and traces.
+Model output cannot erase a deterministic discrepancy without explicit structured
+support. The UI never displays prompts, hidden reasoning, or server traces. See the
+[architecture document](docs/architecture.md) for the trust model and failure paths.
+
+## Demo path
+
+The four responsive screens are:
+
+1. A picker for clean, error, mismatch, legitimate-reassessment, or memory-only PDF
+   input.
+2. Seven bounded processing stages with live status and no chain-of-thought.
+3. A dashboard with exact payment decomposition, severity, impact, and findings.
+4. A detail view with the rendered PDF page, coordinate-based highlight, primary
+   guidance links, and a user-controlled draft.
+
+The custom-file path validates up to five PDFs of 10 MB each and retains them only as
+browser `File` objects. It does not upload or persist them, and it does not present
+the measured synthetic numbers as a custom-account result. The committed
+[three-minute demo video](docs/demo/servicerswitch-demo.webm) follows the measured
+scenario; its timed narration/caption script is in
+[docs/demo-script.md](docs/demo-script.md).
 
 ## Verification
 
-Install Java 21, Python 3.12 or 3.13, Node.js 22, and GNU Make, then install the two
-dependency sets:
+CI and `make verify` run the no-provider release gate:
+
+- Ruff and mypy over the Python service, plus 128 non-LLM service tests;
+- Spotless, Checkstyle, and 16 JUnit tests for the Java engine;
+- ESLint, TypeScript, 4 component/flow tests, a production Next.js build, and one
+  Playwright browser journey;
+- generator, fault, rendering, evaluation-harness, and held-out-isolation checks.
+
+For local verification, install Java 21, Python 3.12 or 3.13, Node.js 22, GNU Make,
+and Playwright Chromium:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -e "./apps/ai[dev]"
 npm ci --prefix apps/web
+npx --prefix apps/web playwright install chromium
 make verify
 ```
 
-On Windows PowerShell, activate with `.\.venv\Scripts\Activate.ps1` and run
-`make PYTHON=.venv/Scripts/python.exe verify` when GNU Make is available. The same
-verification gate runs on every push and pull request.
+On Windows, activate with `.\.venv\Scripts\Activate.ps1` and run
+`make PYTHON=.venv/Scripts/python.exe verify` when GNU Make is installed. Real model
+evaluations are deliberately excluded from `verify` because they cost money.
 
-The web gate includes TypeScript checking, component tests, a production build,
-and a Playwright walkthrough. Install its Chromium runtime once on a new machine:
-
-```bash
-npx --prefix apps/web playwright install chromium
-```
-
-## Evidence-first web demo
-
-Run only the browser interface while developing:
+## Reproduce the measured evaluations
 
 ```bash
-npm --prefix apps/web run dev
+make eval-engine                     # deterministic 300-case HTTP baseline
+make eval-extraction-deterministic   # development-layout parser baseline
+make eval-extraction                 # credentialed A/B/C extraction run
+make eval-rag                        # vector versus hybrid retrieval
+make eval-all                        # credentialed 300-audit agent run
+make eval-baseline                   # credentialed naive long-context run
+make eval-adversarial                # fixed hostile-PDF corpus
 ```
 
-Open `http://localhost:3000`, choose **Tax projection error**, and start the audit.
-The flow shows seven bounded processing stages, a deterministic payment
-decomposition, and the finding's value highlighted on the rendered source PDF.
-The action draft is editable and is never sent automatically. See the
-[web demo guide](docs/web-demo.md) for the screen contract and privacy boundary.
+Provider calls are cached by the complete request contract under ignored
+`data/traces/` storage. The full methodology, held-out policy, limitations, and links
+to generated reports are in [docs/evals.md](docs/evals.md).
 
-## Synthetic accounts
+## Service map
 
-Generate the deterministic 300-account corpus and independently validate every
-financial invariant:
+| Service | Runtime | Port | Responsibility |
+|---|---|---:|---|
+| `apps/web` | Next.js 15 / React 19 | 3000 | Evidence-first four-screen interface |
+| `apps/ai` | Python 3.12 / FastAPI / LangGraph | 8000 | Extraction, retrieval, tools, orchestration |
+| `apps/engine` | Java 21 / Spring Boot 3 | 8080 | Stateless financial reconciliation |
+| `postgres` | PostgreSQL 16 / pgvector | 5432 | Regulation vectors and AI-owned state |
 
-```bash
-make generate-accounts
-make validate-accounts
-```
+## Documentation
 
-The generated JSON is written to `data/accounts/` and intentionally ignored by Git.
-The default seed is stable, so repeated generation produces byte-identical files.
+- [Build specification](servicerswitch_v1_spec.md)
+- [Architecture and trust boundaries](docs/architecture.md)
+- [Evaluation methodology and limitations](docs/evals.md)
+- [Project writeup](docs/writeup.md)
+- [Web demo and evidence viewer](docs/web-demo.md)
+- [Mortgage and escrow domain model](docs/domain-model.md)
+- [Synthetic data, faults, and ground truth](docs/synthetic-data.md)
+- [Deterministic reconciliation engine](docs/reconciliation-engine.md)
+- [Document rendering and extraction](docs/document-rendering.md)
+- [Model-backed extraction fallback](docs/llm-extraction-fallback.md)
+- [Agent tools and investigator graph](docs/agent-tools.md)
+- [Adversarial security boundary](docs/adversarial-security.md)
+- [Implementation ledger](docs/progress.md)
 
-Build and validate the labeled reconciliation corpus:
+## Scope
 
-```bash
-make inject-faults
-make validate-ground-truth
-```
-
-This produces 200 single-fault cases, 60 clean cases, and 40 clean-but-tricky cases,
-with exact labels in `data/ground_truth/cases.jsonl`.
-
-## Deterministic engine evaluation
-
-Run the structured-data baseline before any document extraction or AI processing:
-
-```bash
-make eval-engine
-```
-
-The target is strict: 100% precision, recall, and F1; zero false positives across
-the 100 clean cases; and financial-impact mean absolute error below $0.01. The
-runner packages and starts an isolated engine process, evaluates all 300 cases over
-`POST /reconcile`, writes `evals/reports/engine.md`, and exits nonzero if any target
-is missed.
-
-## Synthetic PDFs
-
-Render and validate the five-document set for every account:
-
-```bash
-make render-documents
-make validate-documents
-```
-
-The output contains 1,500 PDFs under `data/documents/<account_id>/`, split 40%, 40%,
-and 20% across modern, legacy, and held-out layouts. Validation checks every page
-count and required extractable value. CI also prevents the held-out family from
-being referenced by extraction code or prompts under `apps/ai/`.
-
-## Deterministic extraction
-
-Measure the plain-parser baseline on the permitted development layouts:
-
-```bash
-make eval-extraction-deterministic
-```
-
-The extractor uses keyword signatures and label proximity over PyMuPDF word
-coordinates. It returns typed money, rate, date, text, and due-date fields with a
-one-based page, bounding box, source text, and confidence. The stable report is
-written to `evals/reports/extraction_deterministic.md`.
-
-## Model-backed fallback
-
-Export real provider credentials into the process environment before running the
-local evaluator:
-
-```bash
-LLM_API_KEY=... LLM_MODEL=... make eval-extraction
-```
-
-PowerShell users can set `$env:LLM_API_KEY` and `$env:LLM_MODEL`, then run the same
-Make target. A repository `.env` file is consumed by Docker Compose, not implicitly
-by the local Python runner.
-
-The fallback requests only missing or low-confidence fields, schema-validates every
-response, rejects invalid pages and values, and surfaces deterministic/model
-disagreements for review. The real evaluation intentionally reports development and
-held-out layouts in separate columns. With `gpt-5.4-mini`, A/B scores 100% exact
-fields and pages without fallback; held-out Family C scores 93.04% exact fields and
-78.14% page citations with fallback on every document. See the
-[evaluation report](evals/reports/extraction.md) and
-[calibration report](evals/reports/calibration.md).
-
-## Regulation retrieval
-
-The knowledge base contains 47 curated chunks from the primary Regulation X and
-CFPB servicing-transfer sources. Ingest them into PostgreSQL with pgvector and run
-the 25-query comparison:
-
-```bash
-make ingest-kb
-make eval-rag
-```
-
-The embedding client uses `text-embedding-3-small` at 512 dimensions. Set
-`EMBEDDING_API_KEY` or reuse the existing `LLM_API_KEY`; local Python commands read
-credentials from the process environment, while Docker Compose reads `.env`.
-Vector-only and hybrid retrieval both reached 96.00% Recall@5. Hybrid is the
-production choice because its 0.9200 MRR exceeded vector-only's 0.9000 without
-reducing coverage. Full interpretation and limitations are in
-[the evaluation decision](docs/evals.md).
-
-## Agent tool boundary
-
-The investigator receives eight purpose-built tools rather than general database,
-filesystem, or calculator access. Every registry is bound to one framework-supplied
-audit ID, argument schemas reject model-supplied audit IDs, and oversized responses
-carry an explicit truncation marker. Run the dedicated contract and security suite:
-
-```bash
-make test-tools
-```
-
-See [the tool boundary documentation](docs/agent-tools.md) for the complete surface
-and deployment configuration.
-
-## Investigator agent
-
-The C11 graph keeps reconciliation, evidence checks, and risk calculation
-deterministic. Document extraction has fixed control flow with the confidence-gated
-C8 model fallback; only the ambiguous-finding investigation node is agentic. It is
-capped at 12 tool calls and $0.25 per audit, rejects repeated successful calls, and
-routes exhausted or unsupported resolutions to human review without dropping the
-engine finding.
-
-Put the provider key in the ignored repository-root `.env` file:
-
-```dotenv
-LLM_API_KEY=your-key
-LLM_MODEL=gpt-5.4-mini
-LLM_API_BASE=https://api.openai.com/v1
-```
-
-`AGENT_API_KEY`, `AGENT_MODEL`, and `AGENT_API_BASE` may override those shared
-values. The embedding client similarly reuses `LLM_API_KEY` unless
-`EMBEDDING_API_KEY` is set. Run one complete audit with:
-
-```bash
-make run-audit CASE=CASE-0042
-```
-
-The command validates the synthetic PDFs, starts PostgreSQL and the deterministic
-engine, ingests the regulation corpus, and prints typed findings. Every attempted
-tool call is recorded in `data/traces/CASE-0042.jsonl` with bounded arguments and
-result summaries, token usage, and cumulative cost. See
-[the investigator documentation](docs/investigator-agent.md) for graph behavior,
-fail-closed resolution rules, and focused verification commands.
-
-## End-to-end agent evaluation
-
-Run all 300 PDF-backed audits and regenerate the canonical report with:
-
-```bash
-make eval-all
-```
-
-The serialized `gpt-5.4-mini` run produced 100% finding precision, recall, F1, and
-exact-set task success, with zero false positives on 60 clean and 40
-clean-but-tricky cases. Those finding numbers include fail-closed review cases:
-automated task success was 40.00% and human review was required for 60.00% of
-audits. Exact primary-tool selection was 70.00% overall and 55.00% on faulted
-cases; 13/13 tool-error cases recovered. Investigator cost averaged $0.001730 per
-audit, with 2.320s p50 and 5.632s p95 local latency. See the
-[full report](evals/reports/agent.md) for scope and limitations.
-
-## Naive long-context baseline
-
-Run the architecture comparison over the same 300 labeled audits with:
-
-```bash
-make eval-baseline
-```
-
-The baseline concatenates text from all five PDFs and makes exactly one structured
-`gpt-5.4-mini` call per audit. It has no extraction pipeline, reconciliation engine,
-retrieval, tools, or LLM judge. The canonical run completed without provider errors
-but reached only 25.95% finding F1 and 16.67% exact finding-set success. It produced
-false positives on 75.00% of all clean audits and 87.50% of clean-but-tricky audits,
-at $0.003795 mean model cost and 3.624s / 7.721s p50 / p95 latency.
-
-See the [baseline report](evals/reports/baseline.md) and the measured
-[side-by-side comparison](evals/reports/comparison.md). Baseline cost includes its
-full-document call; investigator cost covers investigator tokens and excludes
-embeddings and already-cached extraction calls.
-
-## Adversarial document evaluation
-
-Render and evaluate the fixed hostile-PDF corpus with:
-
-```bash
-make eval-adversarial
-```
-
-The suite covers hidden and tiny instructions, fake authority, delimiter breakout,
-malicious JSON/tool text, contradictory and out-of-range values, empty/image-only
-PDFs, cross-account contamination, and implausible dates. The credentialed
-`gpt-5.4-mini` run matched all 20 expected behaviors and recorded 0/12 successful
-prompt injections with zero execution errors. Eight unsafe documents were rejected
-before model access; the other 12 preserved the trusted `$3,200.00` value.
-
-See the [case report](evals/reports/adversarial.md) and
-[security boundary](docs/adversarial-security.md) for implementation details and
-explicit limitations.
+The repository uses synthetic data only. It provides audit information, not legal
+advice or a conclusion that any law was violated. It intentionally excludes user
+accounts, authentication, billing, messaging integrations, and production-scale
+infrastructure. Full server-side trajectories are retained for evaluation but never
+rendered in the UI, and secrets remain in the ignored `.env` file.

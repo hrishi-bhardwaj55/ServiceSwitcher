@@ -60,7 +60,8 @@ def find_near_label(
 ) -> tuple[Any, ProximityMatch] | None:
     candidates: list[tuple[float, Any, ProximityMatch]] = []
     normalized_aliases = {_normalized(alias) for alias in aliases}
-    for page_number, page in enumerate(document):
+    for page_number in range(document.page_count):
+        page: pymupdf.Page = document.load_page(page_number)
         lines = page_lines(page)
         labels = [line for line in lines if _normalized(line.text) in normalized_aliases]
         for label in labels:
@@ -91,7 +92,8 @@ def find_date_column(
     document: pymupdf.Document, aliases: tuple[str, ...], parser
 ) -> tuple[tuple[Any, ...], ProximityMatch] | None:
     normalized_aliases = {_normalized(alias) for alias in aliases}
-    for page_number, page in enumerate(document):
+    for page_number in range(document.page_count):
+        page: pymupdf.Page = document.load_page(page_number)
         lines = page_lines(page)
         headers = [line for line in lines if _normalized(line.text) in normalized_aliases]
         for header in headers:

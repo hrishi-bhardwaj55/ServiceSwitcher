@@ -5,20 +5,25 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
-from typing import Literal, get_args
+from typing import Literal, cast, get_args
 
 import pymupdf
 from pydantic import Field, model_validator
 
 from app.extraction.classifier import UnclassifiedDocumentError
-from app.extraction.extractor import FIELD_RULES, PARSERS, extract_document
+from app.extraction.extractor import FIELD_RULES, extract_document
 from app.extraction.models import (
     BoundingBox,
     DocumentType,
     ExtractedField,
     FieldName,
 )
-from app.extraction.normalizers import normalize_date
+from app.extraction.normalizers import (
+    normalize_date,
+    normalize_money,
+    normalize_rate,
+    normalize_text,
+)
 from app.llm.models import LLMExtractionRequest, LLMFieldCandidate, LLMPage
 from app.llm.protocol import LLMClient
 from app.schemas.mortgage import CanonicalModel
@@ -26,7 +31,7 @@ from app.security import validate_document_date, validate_model_money
 
 DEFAULT_CLASSIFICATION_THRESHOLD = 0.80
 DEFAULT_FIELD_THRESHOLD = 0.90
-ALL_FIELD_NAMES = tuple(get_args(FieldName))
+ALL_FIELD_NAMES: tuple[FieldName, ...] = cast(tuple[FieldName, ...], get_args(FieldName))
 FieldValue = Decimal | date | str | tuple[date, ...]
 
 
@@ -211,12 +216,12 @@ def _resolve_classification(deterministic, llm_response):
 
 def _normalize_llm_fields(
     candidates: list[LLMFieldCandidate],
-    requested: tuple[str, ...],
-    valid_names: tuple[str, ...],
+    requested: tuple[FieldName, ...],
+    valid_names: tuple[FieldName, ...],
     page_count: int,
-) -> tuple[dict[str, tuple[FieldValue, LLMFieldCandidate]], set[str]]:
-    normalized: dict[str, tuple[FieldValue, LLMFieldCandidate]] = {}
-    rejected: set[str] = set()
+) -> tuple[dict[FieldName, tuple[FieldValue, LLMFieldCandidate]], set[FieldName]]:
+    normalized: dict[FieldName, tuple[FieldValue, LLMFieldCandidate]] = {}
+    rejected: set[FieldName] = set()
     allowed = set(requested) & set(valid_names)
     for candidate in candidates:
         if candidate.field_name not in allowed:
@@ -249,12 +254,15 @@ def _normalize_candidate(candidate: LLMFieldCandidate) -> FieldValue:
         if not values:
             raise ValueError("due date output is empty")
         return values
-    value = PARSERS[parser_kind](candidate.raw_value)
     if parser_kind == "money":
-        return validate_model_money(candidate.field_name, value)
+        return validate_model_money(candidate.field_name, normalize_money(candidate.raw_value))
+    if parser_kind == "rate":
+        return normalize_rate(candidate.raw_value)
     if parser_kind == "date":
-        return validate_document_date(value)
-    return value
+        return validate_document_date(normalize_date(candidate.raw_value))
+    if parser_kind == "text":
+        return normalize_text(candidate.raw_value)
+    raise AssertionError(f"unsupported parser kind: {parser_kind}")
 
 
 def _resolve_field(

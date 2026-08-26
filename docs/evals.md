@@ -3,6 +3,83 @@
 This document records architecture choices that are made from measured results.
 Canonical generated reports remain under `evals/reports/`.
 
+## Methodology at a glance
+
+The primary corpus contains 300 deterministic synthetic mortgage histories: 200
+carry exactly one injected servicing fault, 60 are clean, and 40 are clean but
+deliberately resemble a fault. Generation and fault injection are separate pure
+transformations. An independent validator recomputes invariants and confirms each
+case's exact expected finding type and financial impact before it can enter an
+evaluation.
+
+Each account renders five PDFs, for 1,500 documents total. Template assignment is
+balanced across outcome buckets. Families A and B are development layouts; Family C
+is structurally held out. It reverses label/value order, moves summary information,
+uses two pages per document, abbreviates dates, and changes tables. A CI isolation
+check fails if extraction code or prompts under `apps/ai/` mention Family C. Held-out
+results are always reported separately rather than pooled into a larger headline.
+
+The finding harness compares exact typed sets directly with JSONL ground truth. A
+wrong type is both one false positive and one false negative. Clean-case FPR is the
+fraction of clean audits with at least one non-`EXPLAINED` finding. Financial impact
+uses exact decimal values. Extraction scores typed field equality and one-based page
+citations. Retrieval uses one required chunk per query and reports Recall@5,
+Precision@5, and MRR. No evaluation uses an LLM judge.
+
+Real-provider evaluations use one configured tier, `gpt-5.4-mini`, and run serially.
+Requests are cached by model, prompt-contract version, and complete payload hash so a
+failed run can resume without changing the measured input. Fake clients test behavior
+but never contribute to provider-accuracy claims. The no-provider `make verify` gate
+runs unit, integration, schema, deterministic-eval, and held-out-isolation tests; paid
+experiments remain explicit commands.
+
+| Evaluation slice | Corpus | Result |
+|---|---:|---|
+| Deterministic engine | 300 accounts | 100% precision/recall/F1; 0% clean FPR |
+| Extraction, A/B | 1,200 PDFs | 100% fields and page citations |
+| Extraction, held-out C | 300 PDFs | 93.04% fields; 78.14% page citations |
+| Hybrid retrieval | 25 queries | 96.00% Recall@5; 0.9200 MRR |
+| End-to-end investigator | 300 audits | 100% finding F1; 40% automated success |
+| Naive baseline | 300 audits | 25.95% F1; 75% clean FPR; 87.5% tricky FPR |
+| Adversarial documents | 20 PDFs | 20/20 expected; 0/12 injection success |
+
+## What the numbers do and do not prove
+
+They demonstrate behavior on a reproducible synthetic corpus with exact labels, a
+meaningful layout shift, clean near-misses, and a same-model naive comparison. They
+show that deterministic reconciliation prevents many false positives and that layout
+generalization—not classification—is the extraction bottleneck. They also show that
+correct fail-closed findings are not the same as autonomous completion.
+
+They do not establish production accuracy on real borrower documents, legal
+completeness, OCR robustness, prompt-injection immunity, latency under concurrency,
+or whole-system cost parity. The investigator reconciles a trusted canonical audit
+record after loading and validating all five PDFs; the 100% finding score is not a
+claim that the system reconstructed an entire mortgage ledger from PDFs alone. The
+60% review rate and 55% faulted-case exact tool selection remain first-class
+limitations.
+
+## C5 and C8 — deterministic engine and extraction
+
+The Java baseline calls the real `POST /reconcile` contract for all 300 cases. It
+reaches 200 true positives, no false positives, no false negatives, and $0.0000 impact
+MAE. This is expected for generated structured inputs and primarily proves that the
+fault generator, oracle, HTTP serialization, and detector tolerances agree.
+
+Extraction evaluation keeps development and held-out families separate:
+
+| Metric | A/B development | C held out |
+|---|---:|---:|
+| Document classification | 100.00% | 100.00% |
+| Typed field accuracy | 100.00% | 93.04% |
+| Page-citation accuracy | 100.00% | 78.14% |
+| Model fallback rate | 0.00% | 100.00% |
+
+The held-out gap is not tuned away. In fact, high-confidence held-out fields were
+overconfident relative to observed accuracy, which is why disagreement and low-page
+confidence route to review. See `evals/reports/engine.md`,
+`evals/reports/extraction.md`, and `evals/reports/calibration.md` for generated counts.
+
 ## C9 — regulation retrieval
 
 The retrieval evaluation uses 25 labeled questions against 47 curated chunks from
