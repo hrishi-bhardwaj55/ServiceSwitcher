@@ -127,11 +127,36 @@ def test_openai_investigator_parses_resolution_and_redacts_credentials():
 
     failing = OpenAIInvestigatorModel(
         api_key="secret-key",
+        transport_attempts=1,
         transport=lambda *_: (_ for _ in ()).throw(RuntimeError("bad secret-key")),
     )
     with pytest.raises(RuntimeError, match=r"\[REDACTED\]") as error:
         failing.decide(_request(), {})
     assert "secret-key" not in str(error.value)
+
+
+def test_openai_investigator_retries_transport_failures_only():
+    calls = 0
+    delays = []
+
+    def transport(*_):
+        nonlocal calls
+        calls += 1
+        if calls < 3:
+            raise RuntimeError("transient provider failure")
+        return _provider_response("search_regulations", {"query": "escrow", "limit": 1})
+
+    model = OpenAIInvestigatorModel(
+        api_key="secret-key",
+        transport=transport,
+        sleeper=delays.append,
+    )
+
+    decision = model.decide(_request(), {})
+
+    assert decision.tool_call.name == "search_regulations"
+    assert calls == 3
+    assert delays == [0.25, 0.5]
 
 
 def test_trajectory_logger_writes_bounded_jsonl(tmp_path: Path):

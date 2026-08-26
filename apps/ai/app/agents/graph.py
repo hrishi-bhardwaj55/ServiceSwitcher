@@ -216,7 +216,9 @@ class AuditNodes:
                         event="model_resolution",
                         finding_type=finding.finding_type,
                         status="error",
-                        result_summary=f"model error: {type(error).__name__}",
+                        result_summary=_bounded_observation(
+                            f"model error: {type(error).__name__}: {error}"
+                        ),
                         cumulative_cost_usd=cost,
                         steps_used=steps,
                     )
