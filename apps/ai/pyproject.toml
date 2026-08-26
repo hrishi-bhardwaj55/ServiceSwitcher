@@ -21,6 +21,8 @@ dev = [
   "httpx2>=2.12,<3",
   "pytest>=8.4,<10",
   "pytest-cov>=6.2,<8",
+  "pypdf>=6.1,<7",
+  "reportlab>=4.4,<5",
   "ruff>=0.12,<1",
 ]
 
