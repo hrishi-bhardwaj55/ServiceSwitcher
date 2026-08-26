@@ -90,6 +90,12 @@ class AuditNodes:
                 review = True
                 missing.append(f"{document.document_id}: classification changed during extraction")
             values[document.document_id] = extraction.model_dump(mode="python")
+            if extraction.requires_review:
+                review = True
+                reasons = extraction.review_reasons or ("extraction requires review",)
+                missing.extend(
+                    f"{document.document_id}: {reason}" for reason in reasons
+                )
             self.dependencies.document_store.store_extraction(
                 StoredExtraction(
                     audit_id=state["audit_id"],
@@ -210,7 +216,9 @@ class AuditNodes:
                         event="model_resolution",
                         finding_type=finding.finding_type,
                         status="error",
-                        result_summary=f"model error: {type(error).__name__}",
+                        result_summary=_bounded_observation(
+                            f"model error: {type(error).__name__}: {error}"
+                        ),
                         cumulative_cost_usd=cost,
                         steps_used=steps,
                     )

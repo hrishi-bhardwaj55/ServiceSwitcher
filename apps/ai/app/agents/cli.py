@@ -11,9 +11,10 @@ from uuid import uuid4
 from dotenv import load_dotenv
 
 from app.agents import AgentDependencies, DocumentRef, build_audit_graph, initial_audit_state
-from app.agents.documents import PdfDocumentProcessor
+from app.agents.documents import FallbackPdfDocumentProcessor
 from app.agents.investigator import OpenAIInvestigatorModel
 from app.embeddings import OpenAIEmbeddingClient
+from app.llm import CachedLLMClient, OpenAIResponsesClient
 from app.retrieval import PostgresRuleStore, RegulationRetriever, load_corpus
 from app.retrieval.database import managed_database_engine
 from app.retrieval.ingest import ingest_chunks
@@ -93,6 +94,14 @@ def run_audit(args: argparse.Namespace) -> AuditRunResult:
     missing = InMemoryMissingInformationSink()
     embeddings = OpenAIEmbeddingClient.from_env()
     investigator = OpenAIInvestigatorModel.from_env()
+    extraction_provider = OpenAIResponsesClient.from_env()
+    extraction_client = CachedLLMClient(
+        extraction_provider,
+        args.extraction_cache,
+        namespace=(
+            f"{extraction_provider.api_base}|{extraction_provider.model}|c8-provider-v2"
+        ),
+    )
     with managed_database_engine() as engine:
         corpus = load_corpus(args.corpus)
         ingest_chunks(corpus, embeddings, engine)
@@ -107,7 +116,7 @@ def run_audit(args: argparse.Namespace) -> AuditRunResult:
             AgentDependencies(
                 tools=tools,
                 document_store=source,
-                documents=PdfDocumentProcessor(),
+                documents=FallbackPdfDocumentProcessor(extraction_client),
                 investigator=investigator,
                 trace_root=args.trace_dir,
             )
@@ -142,6 +151,11 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--documents", type=Path, default=Path("data/documents"))
     parser.add_argument("--corpus", type=Path, default=Path("knowledge-base/chunks.jsonl"))
     parser.add_argument("--trace-dir", type=Path, default=Path("data/traces"))
+    parser.add_argument(
+        "--extraction-cache",
+        type=Path,
+        default=Path("data/traces/extraction_llm_cache.jsonl"),
+    )
     return parser.parse_args()
 
 

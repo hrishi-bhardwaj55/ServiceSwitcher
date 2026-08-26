@@ -35,8 +35,9 @@ DOCUMENT_ID = "doc_old_servicer_statement"
 
 
 class FakeDocuments:
-    def __init__(self) -> None:
+    def __init__(self, extraction=None) -> None:
         self.validated = []
+        self.extraction = extraction or _extraction()
 
     def validate(self, document):
         self.validated.append(document.document_id)
@@ -49,7 +50,7 @@ class FakeDocuments:
         )
 
     def extract(self, document):
-        return _extraction()
+        return self.extraction
 
 
 class FakeEngine:
@@ -220,7 +221,7 @@ def _resolve(outcome):
     )
 
 
-def _harness(tmp_path: Path, decisions, *, findings=None):
+def _harness(tmp_path: Path, decisions, *, findings=None, documents=None):
     model = ScriptedInvestigatorModel(decisions)
     engine = FakeEngine([_finding()] if findings is None else findings)
     regulations = FakeRegulations()
@@ -237,7 +238,7 @@ def _harness(tmp_path: Path, decisions, *, findings=None):
     dependencies = AgentDependencies(
         tools=tool_dependencies,
         document_store=source,
-        documents=FakeDocuments(),
+        documents=documents or FakeDocuments(),
         investigator=model,
         trace_root=tmp_path,
     )
@@ -305,6 +306,28 @@ def test_graph_skips_model_and_retrieval_when_engine_has_no_findings(tmp_path):
     assert model.requests == []
     assert regulations.calls == []
     assert engine.calls == [("SS-TEST", "2024-06-01")]
+
+
+def test_graph_routes_model_backed_extraction_review_to_interrupt(tmp_path):
+    extraction = _extraction().model_copy(
+        update={
+            "model_fallback_triggered": True,
+            "requires_review": True,
+            "review_reasons": ("one or more model-backed fields require review",),
+        }
+    )
+    graph, state, config, _, _, _ = _harness(
+        tmp_path,
+        [],
+        findings=[],
+        documents=FakeDocuments(extraction),
+    )
+
+    result = graph.invoke(state, config)
+
+    assert result["requires_review"] is True
+    assert "__interrupt__" in result
+    assert any("model-backed fields" in item for item in result["missing_information"])
 
 
 def test_graph_recovers_from_tool_error_and_accepts_later_resolution(tmp_path):

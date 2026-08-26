@@ -86,3 +86,27 @@ make eval-rag
 `EMBEDDING_API_KEY` may be omitted when `LLM_API_KEY` is already configured. The
 canonical 512-dimensional `text-embedding-3-small` run is recorded in
 `evals/reports/rag.md`; the measured production choice is in `docs/evals.md`.
+
+## End-to-end investigator evaluation
+
+`evals/runners/agent_eval.py` runs the complete audit graph over all 300 cases. It
+loads five PDFs per case, uses the C8 confidence-gated extraction fallback, queries
+the measured hybrid retriever, calls the deterministic engine, and evaluates the
+bounded investigator. Correctness is compared directly with ground truth; no LLM
+judge is used.
+
+```bash
+make eval-all
+```
+
+The canonical run is serialized to avoid measuring provider concurrency limits.
+Tool expectations in `evals/datasets/agent.jsonl` identify the primary evidence
+tool for each finding category. The report includes overall and faulted-only exact
+tool-set accuracy, extra calls, steps, tool-error recovery, model-error cases, review
+rate, investigator token cost, and latency.
+
+The 300-case `gpt-5.4-mini` result is in `evals/reports/agent.md`. Finding F1 is
+100% with zero clean-case false positives, while automated success is 40.00% because
+60.00% of cases route to human review. The report explicitly notes that the engine
+reconciles the canonical audit record; this is not a PDF-only ledger reconstruction
+benchmark.
