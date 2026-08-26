@@ -70,3 +70,19 @@ Successful provider responses are appended to the ignored
 `data/traces/extraction_llm_cache.jsonl` file. The cache key covers the provider base,
 model, prompt-contract version, and complete typed request, allowing interrupted
 evaluations to resume without presenting cached fake output as a real model result.
+
+## Regulation retrieval evaluation
+
+`evals/runners/rag_eval.py` compares the only two C9 retrieval strategies over 25
+required-source questions: vector-only search and vector plus PostgreSQL full-text
+search fused with reciprocal rank fusion. Configure an embedding key, run the
+ingestion, and then evaluate both strategies side by side:
+
+```bash
+make ingest-kb
+make eval-rag
+```
+
+`EMBEDDING_API_KEY` may be omitted when `LLM_API_KEY` is already configured. The
+canonical 512-dimensional `text-embedding-3-small` run is recorded in
+`evals/reports/rag.md`; the measured production choice is in `docs/evals.md`.

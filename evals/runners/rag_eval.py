@@ -110,6 +110,15 @@ def _score(
 def render_report(metrics: dict[str, RetrievalMetrics], model: str, chunks: int) -> str:
     vector = metrics[VECTOR_ONLY]
     hybrid = metrics[HYBRID]
+    selected = max(
+        (VECTOR_ONLY, HYBRID),
+        key=lambda strategy: (
+            metrics[strategy].recall_at_5,
+            metrics[strategy].mrr,
+            metrics[strategy].precision_at_5,
+        ),
+    )
+    selected_label = "vector-only" if selected == VECTOR_ONLY else "hybrid"
     return f"""# Regulation retrieval evaluation
 
 Embedding model: `{model}` at 512 dimensions. Corpus: {chunks} chunks. Dataset:
@@ -119,6 +128,10 @@ Embedding model: `{model}` at 512 dimensions. Corpus: {chunks} chunks. Dataset:
 |---|---:|---:|---:|
 | Vector only | {_percent(vector.recall_at_5)} | {_percent(vector.precision_at_5)} | {_decimal(vector.mrr)} |
 | Hybrid (vector + `tsvector` RRF) | {_percent(hybrid.recall_at_5)} | {_percent(hybrid.precision_at_5)} | {_decimal(hybrid.mrr)} |
+
+Production choice: **{selected_label} retrieval**. The selection rule prioritizes
+Recall@5, then MRR, then Precision@5. See `docs/evals.md` for the decision record and
+benchmark limitations.
 """
 
 

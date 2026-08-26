@@ -15,7 +15,8 @@ is merged to `main`.
 | C6 — document rendering | Complete | 1,500/1,500 PDFs pass page-count and extractable-value validation; exact A/B/C split is 120/120/60; tag `c6-done` |
 | C7 — deterministic extraction | Complete | A and B each score 100% classification, field accuracy, and provenance coverage across 1,200 PDFs and 4,080 fields; tag `c7-done` |
 | C8 — LLM fallback and extraction eval | Complete | Real `gpt-5.4-mini` run: A/B 100% classification/fields/pages with 0% fallback; held-out C 100% classification, 93.04% fields, 78.14% pages, 100% fallback; tag `c8-done` |
-| C9–C16 | Not started | Mandatory chunk order preserved |
+| C9 — knowledge base and retrieval | Complete | 47 primary-source chunks ingested at 512 dimensions; hybrid and vector each reach 96.00% Recall@5, with hybrid selected on 0.9200 vs 0.9000 MRR; tag `c9-done` |
+| C10–C16 | Not started | Mandatory chunk order preserved |
 
 ## Durable decisions
 
@@ -81,3 +82,12 @@ is merged to `main`.
 - Held-out high-confidence fields averaged 98.22% stated confidence but achieved
   93.22% exact accuracy. That overconfidence, plus 78.14% page-citation accuracy, is
   retained as an honest limitation rather than tuned against the held-out layout.
+- The regulation corpus contains 47 concise operational summaries with stable
+  metadata and links to primary CFPB-hosted sources. It is retrieval context, not a
+  substitute for the linked regulation or guidance.
+- Regulation embeddings use `text-embedding-3-small` with an explicit 512-dimension
+  contract shared by the API client, pgvector column, ingestion validation, and
+  query path.
+- C9 compares exactly vector-only retrieval and hybrid vector plus PostgreSQL
+  `tsvector` retrieval. Hybrid RRF with `k=60` is the production choice because it
+  preserved 96.00% Recall@5 and improved MRR from 0.9000 to 0.9200.

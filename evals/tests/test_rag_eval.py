@@ -9,6 +9,7 @@ from evals.runners.rag_eval import (
     VECTOR_ONLY,
     evaluate,
     load_cases,
+    render_report,
     validate_labels,
 )
 
@@ -54,3 +55,17 @@ def test_metrics_score_ranked_required_sources():
     assert metrics[HYBRID].recall_at_5 == Decimal(1)
     assert metrics[HYBRID].precision_at_5 == Decimal("0.2")
     assert metrics[HYBRID].mrr == Decimal("0.5")
+
+
+def test_report_selects_the_strategy_with_better_rank_after_recall():
+    corpus = load_corpus(CORPUS)
+    cases = load_cases(DATASET)[:1]
+    required_id = cases[0].required_sources[0]
+    required = next(chunk for chunk in corpus if chunk.id == required_id)
+    distractor = next(chunk for chunk in corpus if chunk.id != required_id)
+    fake = DeterministicFakeEmbeddingClient({cases[0].query: [1.0, 0.0]}, dimensions=2)
+    metrics = evaluate(cases, RegulationRetriever(FakeStore([distractor, required]), fake))
+
+    report = render_report(metrics, "fake-embedding", len(corpus))
+
+    assert "Production choice: **hybrid retrieval**" in report
