@@ -1,9 +1,10 @@
 from decimal import Decimal
 from pathlib import Path
 
+import pytest
 from reportlab.pdfgen.canvas import Canvas
 
-from app.agents.documents import FallbackPdfDocumentProcessor
+from app.agents.documents import FallbackPdfDocumentProcessor, PdfDocumentProcessor
 from app.agents.models import DocumentRef
 from app.llm import DeterministicFakeLLM, LLMExtractionResponse, LLMFieldCandidate
 
@@ -69,3 +70,35 @@ def test_fallback_processor_classifies_once_and_preserves_page_only_provenance(t
     assert extraction.field_map()["principal_balance"].bounding_box is None
     assert fake.call_count == 1
     fake.assert_exhausted()
+
+
+def test_pdf_validator_rejects_empty_and_cross_account_documents(tmp_path):
+    blank = tmp_path / "blank.pdf"
+    canvas = Canvas(str(blank))
+    canvas.showPage()
+    canvas.save()
+    processor = PdfDocumentProcessor()
+
+    with pytest.raises(ValueError, match="no extractable text"):
+        processor.validate(
+            DocumentRef(
+                audit_id="CASE-1",
+                document_id="blank",
+                account_id="SS-0001",
+                path=blank,
+            )
+        )
+
+    wrong = tmp_path / "wrong-account.pdf"
+    canvas = Canvas(str(wrong))
+    canvas.drawString(72, 720, "ACCOUNT SS-9999")
+    canvas.save()
+    with pytest.raises(ValueError, match="trusted account id"):
+        processor.validate(
+            DocumentRef(
+                audit_id="CASE-1",
+                document_id="wrong",
+                account_id="SS-0001",
+                path=wrong,
+            )
+        )

@@ -17,6 +17,7 @@ from pydantic import Field, model_validator
 
 from app.retrieval import RuleChunk
 from app.schemas.mortgage import CanonicalModel
+from app.security import wrap_untrusted_json
 from app.tools import ScopedAgentTool
 from app.tools.engine import EngineFinding
 
@@ -266,7 +267,10 @@ class OpenAIInvestigatorModel:
         return {
             "model": self.model,
             "instructions": SYSTEM_INSTRUCTIONS,
-            "input": request.model_dump_json(),
+            "input": wrap_untrusted_json(
+                "UNTRUSTED_AUDIT_CONTEXT",
+                request.model_dump(mode="json"),
+            ),
             "tools": provider_tools,
             "tool_choice": "required",
             "parallel_tool_calls": False,

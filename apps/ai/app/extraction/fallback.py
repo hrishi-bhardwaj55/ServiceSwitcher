@@ -22,6 +22,7 @@ from app.extraction.normalizers import normalize_date
 from app.llm.models import LLMExtractionRequest, LLMFieldCandidate, LLMPage
 from app.llm.protocol import LLMClient
 from app.schemas.mortgage import CanonicalModel
+from app.security import validate_document_date, validate_model_money
 
 DEFAULT_CLASSIFICATION_THRESHOLD = 0.80
 DEFAULT_FIELD_THRESHOLD = 0.90
@@ -241,14 +242,19 @@ def _normalize_candidate(candidate: LLMFieldCandidate) -> FieldValue:
     )
     if parser_kind == "dates":
         values = tuple(
-            normalize_date(value)
+            validate_document_date(normalize_date(value))
             for value in candidate.raw_value.split(";")
             if value.strip()
         )
         if not values:
             raise ValueError("due date output is empty")
         return values
-    return PARSERS[parser_kind](candidate.raw_value)
+    value = PARSERS[parser_kind](candidate.raw_value)
+    if parser_kind == "money":
+        return validate_model_money(candidate.field_name, value)
+    if parser_kind == "date":
+        return validate_document_date(value)
+    return value
 
 
 def _resolve_field(

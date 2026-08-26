@@ -13,6 +13,7 @@ from app.extraction.extractor import extract_document
 from app.extraction.fallback import HybridExtractionResult, extract_with_fallback
 from app.extraction.models import ExtractedField, ExtractionResult
 from app.llm.protocol import LLMClient
+from app.security import validate_document_text
 
 
 class DocumentProcessor(Protocol):
@@ -36,8 +37,10 @@ class PdfDocumentProcessor:
             with pymupdf.open(path) as pdf:
                 if pdf.page_count < 1:
                     raise ValueError(f"document {document.document_id} has no pages")
+                text = "\n".join(page.get_text("text", sort=True) for page in pdf)
         except pymupdf.FileDataError as error:
             raise ValueError(f"document {document.document_id} is not a readable PDF") from error
+        validate_document_text(text, expected_account_id=document.account_id)
 
     def classify(self, document: DocumentRef) -> Classification:
         with pymupdf.open(document.path) as pdf:

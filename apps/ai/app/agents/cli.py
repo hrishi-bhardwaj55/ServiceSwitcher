@@ -77,6 +77,7 @@ def document_refs(root: Path, audit_id: str, account_id: str) -> list[DocumentRe
         DocumentRef(
             audit_id=audit_id,
             document_id=document_id,
+            account_id=account_id,
             path=account_root / filename,
         )
         for filename, document_id in DOCUMENT_IDS.items()
