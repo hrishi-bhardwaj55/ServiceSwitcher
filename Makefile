@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: up down verify lint-ai test-engine test-ai test-extraction test-retrieval test-tools test-data test-faults test-render test-evals test-web generate-accounts validate-accounts inject-faults validate-ground-truth eval-engine render-documents validate-documents check-heldout-isolation eval-extraction-deterministic eval-extraction db-migrate ingest-kb eval-rag
+.PHONY: up down verify lint-ai test-engine test-ai test-extraction test-retrieval test-tools test-agent test-data test-faults test-render test-evals test-web generate-accounts validate-accounts inject-faults validate-ground-truth eval-engine render-documents validate-documents check-heldout-isolation eval-extraction-deterministic eval-extraction db-migrate ingest-kb eval-rag run-audit
 
 up:
 	docker compose up --build -d
@@ -29,6 +29,9 @@ test-retrieval:
 test-tools:
 	$(PYTHON) -W error -m pytest -p no:cacheprovider apps/ai/tests/tools
 
+test-agent:
+	$(PYTHON) -W error -m pytest -p no:cacheprovider apps/ai/tests/agents
+
 db-migrate:
 	$(PYTHON) -m alembic -c apps/ai/alembic.ini upgrade head
 
@@ -37,6 +40,12 @@ ingest-kb: db-migrate test-retrieval
 
 eval-rag: ingest-kb test-evals
 	$(PYTHON) -m evals.runners.rag_eval
+
+run-audit: validate-documents test-agent
+	@test -n "$(CASE)" || (echo "CASE is required, for example CASE=CASE-0042" && exit 2)
+	docker compose up -d --wait postgres engine
+	$(PYTHON) -m alembic -c apps/ai/alembic.ini upgrade head
+	$(PYTHON) -m app.agents.cli --case $(CASE)
 
 generate-accounts:
 	$(PYTHON) -m data.generator.generate --output data/accounts --count 300 --seed 20250825
