@@ -14,7 +14,7 @@ from app.retrieval import (
     SearchResult,
     load_corpus,
 )
-from app.retrieval.database import database_engine
+from app.retrieval.database import managed_database_engine
 from app.schemas.mortgage import CanonicalModel
 from pydantic import Field
 
@@ -160,8 +160,9 @@ def main() -> None:
     corpus = load_corpus(args.corpus)
     validate_labels(cases, {chunk.id for chunk in corpus})
     embeddings = OpenAIEmbeddingClient.from_env()
-    retriever = RegulationRetriever(PostgresRuleStore(database_engine()), embeddings)
-    metrics = evaluate(cases, retriever)
+    with managed_database_engine() as engine:
+        retriever = RegulationRetriever(PostgresRuleStore(engine), embeddings)
+        metrics = evaluate(cases, retriever)
     report = render_report(metrics, embeddings.model, len(corpus))
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(report, encoding="utf-8")

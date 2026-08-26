@@ -9,7 +9,11 @@ from sqlalchemy import Engine, text
 
 from app.embeddings import EmbeddingClient, OpenAIEmbeddingClient
 from app.retrieval.corpus import load_corpus
-from app.retrieval.database import DATABASE_DIMENSIONS, database_engine, vector_literal
+from app.retrieval.database import (
+    DATABASE_DIMENSIONS,
+    managed_database_engine,
+    vector_literal,
+)
 from app.retrieval.models import RuleChunk
 
 
@@ -69,7 +73,8 @@ def main() -> None:
     args = _parse_args()
     chunks = load_corpus(args.corpus)
     client = OpenAIEmbeddingClient.from_env()
-    count = ingest_chunks(chunks, client, database_engine())
+    with managed_database_engine() as engine:
+        count = ingest_chunks(chunks, client, engine)
     print(
         f"Ingested {count} regulation chunks with {client.model} "
         f"({client.dimensions} dimensions)"

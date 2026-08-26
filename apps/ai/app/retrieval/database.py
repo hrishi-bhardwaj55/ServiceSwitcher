@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import math
 import os
+from collections.abc import Iterator
+from contextlib import contextmanager
 
 from sqlalchemy import Engine, create_engine
 
@@ -26,3 +28,13 @@ def vector_literal(vector: list[float]) -> str:
 
 def database_engine() -> Engine:
     return create_engine(os.getenv("DATABASE_URL", LOCAL_DATABASE_URL), pool_pre_ping=True)
+
+
+@contextmanager
+def managed_database_engine() -> Iterator[Engine]:
+    """Create an engine and always close its pooled database connections."""
+    engine = database_engine()
+    try:
+        yield engine
+    finally:
+        engine.dispose()

@@ -1,8 +1,10 @@
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 
 from app.embeddings import DeterministicFakeEmbeddingClient
+from app.retrieval import database as retrieval_database
 from app.retrieval import load_corpus
 from app.retrieval.database import DATABASE_DIMENSIONS, vector_literal
 from app.retrieval.ingest import embedding_text
@@ -41,3 +43,15 @@ def test_fake_embedding_client_is_strict_and_deterministic():
     assert client.embed(["escrow"]) == [[1.0, 0.0]]
     with pytest.raises(AssertionError, match="no fake embedding"):
         client.embed(["transfer"])
+
+
+def test_managed_database_engine_always_disposes(monkeypatch):
+    engine = Mock()
+    monkeypatch.setattr(retrieval_database, "database_engine", lambda: engine)
+
+    with pytest.raises(RuntimeError, match="forced failure"):
+        with retrieval_database.managed_database_engine() as managed:
+            assert managed is engine
+            raise RuntimeError("forced failure")
+
+    engine.dispose.assert_called_once_with()
