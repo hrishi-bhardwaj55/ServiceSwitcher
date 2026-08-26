@@ -1,0 +1,160 @@
+# Implementation progress
+
+This ledger records completed specification gates and durable implementation
+decisions. A chunk is marked complete only after its acceptance commands pass and it
+is merged to `main`.
+
+| Chunk | Status | Acceptance evidence |
+|---|---|---|
+| C0 — domain model | Complete | Hand-computable escrow and payment examples documented; tag `c0-done` |
+| C1 — repository skeleton | Complete | Full local verification passed; four Compose services healthy; tag `c1-done` |
+| C2 — synthetic account generator | Complete | Deterministic generation and independent validation pass for 300/300 accounts; property and mutation tests pass; tag `c2-done` |
+| C3 — fault injection and ground truth | Complete | 200 single-fault, 60 clean, and 40 clean-but-tricky cases validate 300/300; tag `c3-done` |
+| C4 — deterministic reconciliation engine | Complete | Five detectors, explicit explained outcome, tolerance boundary tests, and HTTP contract pass; tag `c4-done` |
+| C5 — first eval number | Complete | 100% precision/recall/F1, 0/100 clean false positives, and $0.0000 impact MAE across 300 HTTP reconciliations; tag `c5-done` |
+| C6 — document rendering | Complete | 1,500/1,500 PDFs pass page-count and extractable-value validation; exact A/B/C split is 120/120/60; tag `c6-done` |
+| C7 — deterministic extraction | Complete | A and B each score 100% classification, field accuracy, and provenance coverage across 1,200 PDFs and 4,080 fields; tag `c7-done` |
+| C8 — LLM fallback and extraction eval | Complete | Real `gpt-5.4-mini` run: A/B 100% classification/fields/pages with 0% fallback; held-out C 100% classification, 93.04% fields, 78.14% pages, 100% fallback; tag `c8-done` |
+| C9 — knowledge base and retrieval | Complete | 47 primary-source chunks ingested at 512 dimensions; hybrid and vector each reach 96.00% Recall@5, with hybrid selected on 0.9200 vs 0.9000 MRR; tag `c9-done` |
+| C10 — agent tools | Complete | Exactly eight strict, audit-bound tools; every tool passes happy-path, malformed-argument, cross-audit, and truncation tests; tag `c10-done` |
+| C11 — investigator agent | Complete | Exact LangGraph pipeline, one agentic node, 12-call/$0.25 fail-closed budgets, JSONL trajectories, HITL checkpoint resume, and live CASE-0042 finding preserved; tag `c11-done` |
+| C12 — agent evaluation | Complete | 300/300 exact finding sets, 0/100 clean false positives, 40.00% automated success, 55.00% faulted-case tool accuracy, 13/13 tool-error recovery, and zero model errors; tag `c12-done` |
+| C13 — naive baseline | Complete | 300/300 one-call cases without execution failures: 25.95% F1, 16.67% exact-set success, 75.00% clean FPR, and 87.50% tricky FPR; tag `c13-done` |
+| C14 — adversarial suite | Complete | 20/20 recorded behaviors passed; 8/8 unsafe documents rejected pre-model; 0/12 prompt-injection success; zero execution errors; tag `c14-done` |
+| C15 — web UI | Complete | Four-screen responsive demo, highlighted source-PDF evidence, 4 component/flow tests, 1 Playwright path, and manual desktop/phone browser review; tag `c15-done` |
+| C16 — ship | Complete | Numbers-first README, architecture/eval docs, 990-word writeup, 180.92-second 720p demo, provider-free 47-vector seed, four healthy services, and full release gate; tag `v1.0.0` |
+
+## Durable decisions
+
+- `main` is the integration branch. The repository's original `master` branch is
+  retained remotely for history but receives no new work.
+- Java builds use the checked-in Apache Maven Wrapper because contributors should
+  not need a global Maven installation.
+- Dependency majors follow the specification: Java 21 / Spring Boot 3, Python 3.12+
+  / FastAPI / Pydantic v2, and Next.js 15 / React 19.
+- The database container is pinned to PostgreSQL 16 with pgvector 0.8.6.
+- C1 health tests do not require PostgreSQL; service process health and dependency
+  readiness remain separate concepts.
+- Canonical monetary JSON fields are decimal strings. This preserves exact cents
+  across Python `Decimal`, future Java `BigDecimal`, and generated artifacts.
+- The C2 corpus uses a fixed seed and atomic per-file replacement. Re-running the
+  generator is byte-stable and removes only stale `account-*.json` generator output.
+- Clean accounts include an explicit zero-dollar transfer marker. The old- and
+  new-servicer analyses use the same marker balance, making transfer continuity
+  directly testable without inventing an off-ledger opening balance.
+- Every C3 fault injector is a pure transformation. It preserves non-target
+  calculations so the structured-data oracle observes exactly one finding with an
+  exact total and monthly impact.
+- C3 ground truth is JSONL with decimal-string impacts, matching the canonical
+  account serialization and avoiding cross-runtime binary-float ambiguity.
+- The C4 engine is stateless and constructs its fixed detector registry in process.
+  It has no persistence, database access, AI model, LLM client, or outbound HTTP
+  dependency.
+- `EXPLAINED` is emitted as a first-class payment outcome with the complete
+  decomposition. Evaluation of the five discrepancy types can filter this explicit
+  non-finding without losing the explanation.
+- Engine evaluation is case-aware and type-aware: a wrong finding type contributes
+  one false positive and one false negative. Its impact metric is the per-case mean
+  absolute error between expected total impact and the sum of non-`EXPLAINED`
+  finding differences.
+- `make eval-engine` owns an isolated engine process on an available loopback port,
+  so evaluation does not depend on a manually started service or a fixed port.
+- Template assignment cycles over every five account identifiers instead of using
+  contiguous ranges. The exact 40%/40%/20% distribution therefore remains balanced
+  across fault types and clean-case buckets.
+- Family C is structurally held out: detail precedes summary, every document has two
+  pages, values sit above labels, dates are abbreviated, and source scanning rejects
+  any Family C reference under `apps/ai/`.
+- PDF validation combines pypdf page/text checks across all 1,500 artifacts with
+  Poppler-rendered visual inspection of representative documents from each family.
+- Deterministic extraction groups PyMuPDF words into visual lines and accepts values
+  only when strict type parsing succeeds on the same row or immediately below a
+  known label. It does not infer missing values.
+- Extracted percentages use the canonical fractional representation, money remains
+  exact `Decimal`, and every accepted value carries a one-based page, value bounding
+  box, source text, and bounded confidence.
+- The development-set accuracy floors are recorded in tests at 99% classification
+  and 98% fields; both layouts currently score 100%, with 100% provenance coverage.
+- Model fallback has separate 0.80 classification and 0.90 field thresholds. It is
+  never called for a high-confidence deterministic result, and it receives only
+  requested field names plus page-delimited untrusted text.
+- Deterministic/model disagreement is not silently resolved: both alternatives are
+  retained, confidence is capped at 0.49, and the unified field requires review.
+- Fake-provider runs test behavior but are not reported as model accuracy. The C8
+  headline numbers come from a credentialed `gpt-5.4-mini` run over all 1,500 PDFs.
+- Provider responses are cached by model, prompt-contract version, and complete
+  request hash under ignored `data/traces/` storage. A reproduced run used 300 cache
+  hits and zero provider calls while yielding the same reports.
+- Held-out high-confidence fields averaged 98.22% stated confidence but achieved
+  93.22% exact accuracy. That overconfidence, plus 78.14% page-citation accuracy, is
+  retained as an honest limitation rather than tuned against the held-out layout.
+- The regulation corpus contains 47 concise operational summaries with stable
+  metadata and links to primary CFPB-hosted sources. It is retrieval context, not a
+  substitute for the linked regulation or guidance.
+- Regulation embeddings use `text-embedding-3-small` with an explicit 512-dimension
+  contract shared by the API client, pgvector column, ingestion validation, and
+  query path.
+- C9 compares exactly vector-only retrieval and hybrid vector plus PostgreSQL
+  `tsvector` retrieval. Hybrid RRF with `k=60` is the production choice because it
+  preserved 96.00% Recall@5 and improved MRR from 0.9000 to 0.9200.
+- Agent tool schemas never accept `audit_id`; the framework binds a registry to one
+  audit and supplies a trusted invocation context. Mismatches fail before argument
+  parsing or dependency access, with document ownership checked again at the data
+  source.
+- The agent receives no arbitrary SQL, filesystem, URL-fetch, or calculator tool.
+  Financial calculations cross a strict typed boundary to the deterministic engine,
+  and regulation search uses only the measured C9 hybrid path.
+- Every tool response shares an 8,000-character cap and an explicit
+  `...[TRUNCATED]` marker so context growth is bounded and visible to the model.
+- The C11 graph contains the specification's exact node sequence. Reconciliation,
+  evidence, and risk nodes are deterministic. Document extraction has fixed control
+  flow with the bounded C8 fallback; only ambiguous-finding investigation is agentic.
+- Investigator calls use the Responses API through a strict one-action boundary,
+  with `gpt-5.4-mini` pricing enforced in code, a maximum of 12 tool calls and 32
+  model turns, and a conservative $0.25 preflight cost ceiling per audit.
+- A model resolution cannot erase an engine finding merely by saying it is
+  explained. Suppression requires a structured deterministic result that explicitly
+  explains the same condition; unsupported explanations and repeated successful
+  tool calls preserve the finding and require human review.
+- Trajectories are append-only JSONL under ignored `data/traces/`, including bounded
+  arguments and result summaries, token counts, per-turn and cumulative cost, and
+  rejected or exhausted actions. Provider keys are never logged.
+- C12 exposed and fixed two integration failures before numbers were published: the
+  audit graph now uses the C8 confidence-gated fallback for held-out Family C PDFs,
+  and investigator transport calls have bounded retries for transient failures.
+- The canonical C12 run is serialized. It scored 200/200 expected findings with no
+  false positives across 100 clean cases, recovered all 13 tool-error cases, and had
+  zero model-error cases. The 60.00% review rate and 55.00% faulted-case exact tool
+  accuracy are retained as primary limitations rather than hidden by 100% F1.
+- The C13 baseline receives page-delimited text from all five PDFs in one structured
+  model request. It has no tools, engine, retrieval, extraction fallback, or judge.
+  Strict output fields use required nullable values, and monetary outputs are JSON
+  numbers so provider-valid strings cannot fail downstream decimal parsing.
+- The canonical baseline run is serialized and cached by the complete request
+  payload. Its 25.95% finding F1, 75.00% all-clean FPR, and 87.50% tricky FPR are
+  reported without tuning the prompt against individual cases.
+- C14 binds documents to trusted account IDs and rejects empty/image-only,
+  cross-account, contradictory, out-of-range, and implausibly dated text before model
+  use. Model context uses collision-safe JSON delimiters, and typed output values are
+  normalized and range-checked again.
+- The fixed 20-PDF C14 corpus is reproducibly rendered from its JSONL manifest. The
+  canonical model run preserved trusted extraction in all 12 injection cases and
+  rejected the other eight cases without a model call.
+- The C15 demo renders page images generated directly from the synthetic source
+  PDFs and positions highlights with normalized extractor-style bounding boxes. The
+  linked original PDF remains available beside every page image.
+- Bring-your-own PDFs remain in browser memory only. C15 validates file type, size,
+  and count client-side and clearly labels the measured synthetic audit when custom
+  files are selected; it does not imply that a custom account was reconciled.
+- C16 makes Ruff plus mypy, Spotless plus Checkstyle, and ESLint plus TypeScript part
+  of the no-provider merge gate. Provider, extraction, and graph types were tightened
+  until all 47 Python application modules passed mypy without file-level exclusions.
+- `make demo` migrates PostgreSQL and seeds the 47 measured C9 vectors from a
+  checked-in artifact whose IDs, dimensions, and finite values are validated. Demo
+  startup sends no corpus text to a provider and incurs no embedding charge.
+- The production web container copies Next.js `public/` assets explicitly, and its
+  health check requires both the root page and the evidence-page PNG. Video frame
+  inspection caught this packaging gap before release.
+- The release video is a reproducible 1280×720 WebM walkthrough measured at 180.92
+  seconds. A timed narration/caption script is checked in separately; the video is
+  silent because the available local speech runtime could not reliably render audio.

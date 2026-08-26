@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "servicerswitch-ai"
+version = "0.1.0"
+description = "Document extraction and investigation service for ServicerSwitch"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  "alembic>=1.16,<2",
+  "fastapi==0.141.1",
+  "langgraph==1.2.11",
+  "psycopg[binary]>=3.2,<4",
+  "pymupdf>=1.26,<2",
+  "python-dotenv>=1.2,<2",
+  "sqlalchemy>=2.0,<3",
+  "uvicorn[standard]>=0.35,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "hypothesis>=6.138,<7",
+  "httpx2>=2.12,<3",
+  "mypy>=1.18,<2",
+  "pytest>=8.4,<10",
+  "pytest-cov>=6.2,<8",
+  "pypdf>=6.1,<7",
+  "reportlab>=4.4,<5",
+  "ruff>=0.12,<1",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers"
+testpaths = ["tests"]
+markers = [
+  "llm: calls the configured real model provider and is excluded from verify",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.mypy]
+python_version = "3.12"
+check_untyped_defs = true
+disallow_untyped_defs = true
+disable_error_code = ["import-untyped"]
+ignore_missing_imports = true
+no_implicit_optional = true
+show_error_codes = true
+warn_redundant_casts = true
+warn_unused_ignores = true
