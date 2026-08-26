@@ -151,6 +151,12 @@ def test_report_states_direct_scoring_and_operational_metrics():
     assert "Failure recovery rate | n/a" in report
     assert "Model cost per audit (mean) | $0.000000" in report
 
+    fault_only = calculate_metrics(
+        [_result("CASE-2", "faulted", ["A"], ["A"], ["tool"], ["tool"])]
+    )
+    assert fault_only.clean_false_positive_rate == Decimal(0)
+    assert fault_only.tricky_false_positive_rate == Decimal(0)
+
 
 def test_execute_cases_applies_category_expectations_and_preserves_order():
     cases = load_ground_truth(ROOT / "data" / "ground_truth" / "cases.jsonl")[:2]

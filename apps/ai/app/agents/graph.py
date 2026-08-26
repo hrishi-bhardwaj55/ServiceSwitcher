@@ -90,6 +90,12 @@ class AuditNodes:
                 review = True
                 missing.append(f"{document.document_id}: classification changed during extraction")
             values[document.document_id] = extraction.model_dump(mode="python")
+            if extraction.requires_review:
+                review = True
+                reasons = extraction.review_reasons or ("extraction requires review",)
+                missing.extend(
+                    f"{document.document_id}: {reason}" for reason in reasons
+                )
             self.dependencies.document_store.store_extraction(
                 StoredExtraction(
                     audit_id=state["audit_id"],

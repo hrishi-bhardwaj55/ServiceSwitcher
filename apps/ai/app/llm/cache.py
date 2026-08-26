@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+from threading import Lock
 
 from app.llm.models import LLMExtractionRequest, LLMExtractionResponse
 from app.llm.protocol import LLMClient
@@ -18,25 +19,32 @@ class CachedLLMClient:
         self.hits = 0
         self.misses = 0
         self._responses = self._load()
+        self._lock = Lock()
 
     def extract(self, request: LLMExtractionRequest) -> LLMExtractionResponse:
         key = self._key(request)
-        cached = self._responses.get(key)
-        if cached is not None:
-            self.hits += 1
-            return cached
+        with self._lock:
+            cached = self._responses.get(key)
+            if cached is not None:
+                self.hits += 1
+                return cached
 
-        self.misses += 1
         response = self.delegate.extract(request)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        record = {
-            "key": key,
-            "response": response.model_dump(mode="json"),
-        }
-        with self.path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(record, sort_keys=True) + "\n")
-            handle.flush()
-        self._responses[key] = response
+        with self._lock:
+            cached = self._responses.get(key)
+            if cached is not None:
+                self.hits += 1
+                return cached
+            self.misses += 1
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            record = {
+                "key": key,
+                "response": response.model_dump(mode="json"),
+            }
+            with self.path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(record, sort_keys=True) + "\n")
+                handle.flush()
+            self._responses[key] = response
         return response
 
     def _key(self, request: LLMExtractionRequest) -> str:

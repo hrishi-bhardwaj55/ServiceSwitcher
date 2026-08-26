@@ -16,10 +16,11 @@ from uuid import uuid4
 
 from app.agents import AgentDependencies, build_audit_graph, initial_audit_state
 from app.agents.cli import document_refs, load_account
-from app.agents.documents import PdfDocumentProcessor
+from app.agents.documents import FallbackPdfDocumentProcessor
 from app.agents.investigator import OpenAIInvestigatorModel
 from app.agents.tracing import TrajectoryEvent
 from app.embeddings import OpenAIEmbeddingClient
+from app.llm import CachedLLMClient, LLMClient, OpenAIResponsesClient
 from app.retrieval import PostgresRuleStore, RegulationRetriever, load_corpus
 from app.retrieval.database import managed_database_engine
 from app.retrieval.ingest import ingest_chunks
@@ -144,10 +145,14 @@ class AgentEvaluationMetrics:
 
     @property
     def clean_false_positive_rate(self) -> Decimal:
+        if self.clean_cases == 0:
+            return Decimal(0)
         return _ratio(self.clean_false_positive_cases, self.clean_cases)
 
     @property
     def tricky_false_positive_rate(self) -> Decimal:
+        if self.tricky_cases == 0:
+            return Decimal(0)
         return _ratio(self.tricky_false_positive_cases, self.tricky_cases)
 
     @property
@@ -243,6 +248,7 @@ class AgentEvaluationRuntime:
     regulations: RegulationRetriever
     engine: HttpReconciliationEngine
     investigator: OpenAIInvestigatorModel
+    extraction_client: LLMClient
     trace_root: Path
 
     def run_case(
@@ -272,7 +278,7 @@ class AgentEvaluationRuntime:
                     missing_information=InMemoryMissingInformationSink(),
                 ),
                 document_store=source,
-                documents=PdfDocumentProcessor(),
+                documents=FallbackPdfDocumentProcessor(self.extraction_client),
                 investigator=self.investigator,
                 trace_root=self.trace_root,
             )
@@ -477,6 +483,11 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--documents", type=Path, default=Path("data/documents"))
     parser.add_argument("--corpus", type=Path, default=Path("knowledge-base/chunks.jsonl"))
     parser.add_argument("--trace-root", type=Path, default=Path("data/traces/agent-eval"))
+    parser.add_argument(
+        "--extraction-cache",
+        type=Path,
+        default=Path("data/traces/extraction_llm_cache.jsonl"),
+    )
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--case", action="append", dest="case_ids")
     parser.add_argument("--expected-count", type=int, default=EXPECTED_CASE_COUNT)
@@ -499,6 +510,14 @@ def main() -> None:
     trace_root = args.trace_root / datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
     embeddings = OpenAIEmbeddingClient.from_env()
     investigator = OpenAIInvestigatorModel.from_env()
+    extraction_provider = OpenAIResponsesClient.from_env()
+    extraction_client = CachedLLMClient(
+        extraction_provider,
+        args.extraction_cache,
+        namespace=(
+            f"{extraction_provider.api_base}|{extraction_provider.model}|c8-provider-v2"
+        ),
+    )
     with managed_database_engine() as database:
         corpus = load_corpus(args.corpus)
         ingest_chunks(corpus, embeddings, database)
@@ -508,6 +527,7 @@ def main() -> None:
             regulations=RegulationRetriever(PostgresRuleStore(database), embeddings),
             engine=HttpReconciliationEngine.from_env(),
             investigator=investigator,
+            extraction_client=extraction_client,
             trace_root=trace_root,
         )
         results = execute_cases(

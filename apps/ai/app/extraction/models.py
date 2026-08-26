@@ -62,7 +62,7 @@ class ExtractedField(CanonicalModel):
     field_name: FieldName
     value: Decimal | date | str | tuple[date, ...]
     page: int = Field(ge=1)
-    bounding_box: BoundingBox
+    bounding_box: BoundingBox | None = None
     confidence: float = Field(ge=0, le=1)
     source_text: str = Field(min_length=1)
 
@@ -89,6 +89,9 @@ class ExtractionResult(CanonicalModel):
     document_type: DocumentType
     classification_confidence: float = Field(ge=0, le=1)
     fields: list[ExtractedField]
+    model_fallback_triggered: bool = False
+    requires_review: bool = False
+    review_reasons: tuple[str, ...] = ()
 
     def field_map(self) -> dict[FieldName, ExtractedField]:
         return {field.field_name: field for field in self.fields}
