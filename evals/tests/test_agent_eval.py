@@ -119,6 +119,7 @@ def test_metrics_score_findings_tools_recovery_cost_and_percentiles():
     assert metrics.recall == Decimal("0.5")
     assert metrics.f1 == Decimal("0.4")
     assert metrics.task_success_rate == Decimal("0.5")
+    assert metrics.automated_task_success_rate == Decimal("0.5")
     assert metrics.clean_false_positive_rate == Decimal("0.5")
     assert metrics.tricky_false_positive_rate == Decimal(1)
     assert metrics.tool_selection_accuracy == Decimal("0.5")
@@ -151,10 +152,12 @@ def test_report_states_direct_scoring_and_operational_metrics():
     report = render_report(metrics, model="test-model")
 
     assert "no LLM judge is used" in report
+    assert "Automated task success" in report
     assert "Exact tool-set accuracy | 100.00%" in report
     assert "Failure recovery rate | n/a (0 tool-error cases)" in report
     assert "Fail-closed model-error cases | 0" in report
     assert "Model cost per audit (mean) | $0.000000" in report
+    assert "do not measure reconstruction" in report
 
     fault_only = calculate_metrics(
         [_result("CASE-2", "faulted", ["A"], ["A"], ["tool"], ["tool"])]

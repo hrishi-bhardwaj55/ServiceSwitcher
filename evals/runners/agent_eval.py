@@ -120,6 +120,7 @@ class AgentEvaluationMetrics:
     clean_false_positive_cases: int
     tricky_false_positive_cases: int
     successful_cases: int
+    automated_successful_cases: int
     correct_tool_selection_cases: int
     faulted_correct_tool_selection_cases: int
     total_unnecessary_tool_calls: int
@@ -161,6 +162,10 @@ class AgentEvaluationMetrics:
     @property
     def task_success_rate(self) -> Decimal:
         return _ratio(self.successful_cases, self.total_cases)
+
+    @property
+    def automated_task_success_rate(self) -> Decimal:
+        return _ratio(self.automated_successful_cases, self.total_cases)
 
     @property
     def tool_selection_accuracy(self) -> Decimal:
@@ -397,6 +402,9 @@ def calculate_metrics(results: Sequence[AgentCaseResult]) -> AgentEvaluationMetr
         clean_false_positive_cases=sum(bool(result.predicted_findings) for result in clean),
         tricky_false_positive_cases=sum(bool(result.predicted_findings) for result in tricky),
         successful_cases=sum(result.task_succeeded for result in results),
+        automated_successful_cases=sum(
+            result.task_succeeded and not result.requires_review for result in results
+        ),
         correct_tool_selection_cases=sum(result.tool_selection_correct for result in results),
         faulted_correct_tool_selection_cases=sum(
             result.tool_selection_correct for result in results if result.bucket == "faulted"
@@ -437,6 +445,7 @@ Correctness is scored directly against ground truth; no LLM judge is used.
 | Recall | {_percent(metrics.recall)} |
 | F1 | {_percent(metrics.f1)} |
 | Task success (exact finding set) | {_percent(metrics.task_success_rate)} |
+| Automated task success (exact set, no review) | {_percent(metrics.automated_task_success_rate)} |
 | Clean-case false-positive rate | {_percent(metrics.clean_false_positive_rate)} |
 | Clean-but-tricky false-positive rate | {_percent(metrics.tricky_false_positive_rate)} |
 
@@ -461,6 +470,21 @@ execution failures.
 Model cost includes investigator input/output tokens priced by the C11 boundary;
 embedding calls are not included. A tool call is unnecessary when it is outside the
 expected category set or repeats a tool already credited for that run.
+
+## Interpretation and limitations
+
+Finding correctness and automated completion are deliberately separate. The graph
+retains deterministic findings whenever evidence, model behavior, or extraction
+confidence requires review, so fail-closed cases can be correct without being
+autonomous.
+
+Each audit loads all five rendered PDFs and evaluates extraction and evidence, while
+the deterministic engine reconciles the synthetic canonical audit record. The
+finding metrics therefore evaluate end-to-end orchestration around a trusted
+structured record; they do not measure reconstruction of the complete mortgage
+ledger from PDFs alone. The canonical run is serialized to avoid provider-concurrency
+errors. Latency is local wall time with cached C8 extraction responses and is not a
+production load test.
 """
 
 
@@ -508,7 +532,7 @@ def _parse_args() -> argparse.Namespace:
         type=Path,
         default=Path("data/traces/extraction_llm_cache.jsonl"),
     )
-    parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--case", action="append", dest="case_ids")
     parser.add_argument("--expected-count", type=int, default=EXPECTED_CASE_COUNT)
     return parser.parse_args()
@@ -561,6 +585,10 @@ def main() -> None:
     report = render_report(metrics, model=investigator.model)
     write_report(args.report, report)
     print(report)
+    print(
+        f"Extraction cache: {extraction_client.hits} hits, "
+        f"{extraction_client.misses} misses"
+    )
     print(f"Trajectories: {trace_root}")
     print(f"Wrote report to {args.report}")
 
