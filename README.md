@@ -4,8 +4,8 @@ ServicerSwitch is a demoable mortgage-servicing transfer auditor. It combines a
 deterministic financial reconciliation engine with a tool-using AI investigator,
 and requires document-level evidence for every AI-assisted claim.
 
-> Status: C3 complete — the service foundation, validated mortgage corpus, and
-> machine-readable single-fault ground truth are present. See the
+> Status: C4 complete — the deterministic Java reconciliation engine now evaluates
+> the validated account and ground-truth corpus. See the
 > [implementation ledger](docs/progress.md).
 
 ## Project principles
@@ -23,12 +23,13 @@ and requires document-level evidence for every AI-assisted claim.
 - [Mortgage and escrow domain model](docs/domain-model.md)
 - [Synthetic account generation](docs/synthetic-data.md)
 - [Fault injection and ground truth](docs/fault-injection.md)
+- [Deterministic reconciliation engine](docs/reconciliation-engine.md)
 - [Implementation progress](docs/progress.md)
 
 ## Services
 
 - `apps/engine`: stateless Java 21 / Spring Boot 3 reconciliation service on port
-  `8080`
+  `8080`, exposing `POST /reconcile`
 - `apps/ai`: Python 3.12 / FastAPI extraction and investigation service on port
   `8000`
 - `apps/web`: Next.js 15 audit interface on port `3000`

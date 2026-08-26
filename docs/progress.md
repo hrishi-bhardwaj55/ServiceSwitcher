@@ -10,7 +10,8 @@ is merged to `main`.
 | C1 — repository skeleton | Complete | Full local verification passed; four Compose services healthy; tag `c1-done` |
 | C2 — synthetic account generator | Complete | Deterministic generation and independent validation pass for 300/300 accounts; property and mutation tests pass; tag `c2-done` |
 | C3 — fault injection and ground truth | Complete | 200 single-fault, 60 clean, and 40 clean-but-tricky cases validate 300/300; tag `c3-done` |
-| C4–C16 | Not started | Mandatory chunk order preserved |
+| C4 — deterministic reconciliation engine | Complete | Five detectors, explicit explained outcome, tolerance boundary tests, and HTTP contract pass; tag `c4-done` |
+| C5–C16 | Not started | Mandatory chunk order preserved |
 
 ## Durable decisions
 
@@ -35,3 +36,9 @@ is merged to `main`.
   exact total and monthly impact.
 - C3 ground truth is JSONL with decimal-string impacts, matching the canonical
   account serialization and avoiding cross-runtime binary-float ambiguity.
+- The C4 engine is stateless and constructs its fixed detector registry in process.
+  It has no persistence, database access, AI model, LLM client, or outbound HTTP
+  dependency.
+- `EXPLAINED` is emitted as a first-class payment outcome with the complete
+  decomposition. Evaluation of the five discrepancy types can filter this explicit
+  non-finding without losing the explanation.
