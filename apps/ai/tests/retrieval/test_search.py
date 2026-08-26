@@ -87,3 +87,16 @@ def test_empty_query_is_rejected_before_provider_call():
         retriever.vector_only("  ")
 
     assert embeddings.requests == []
+
+
+def test_compare_shares_one_embedding_across_both_strategies():
+    chunks = load_corpus(CORPUS)
+    store = FakeStore([_result(chunks[0], 0.9)], [_result(chunks[1], 0.8)])
+    embeddings = DeterministicFakeEmbeddingClient({"transfer": [1.0, 1.0]}, dimensions=2)
+    retriever = RegulationRetriever(store, embeddings)
+
+    vector, hybrid = retriever.compare("transfer")
+
+    assert [result.chunk.id for result in vector] == [chunks[0].id]
+    assert {result.chunk.id for result in hybrid} == {chunks[0].id, chunks[1].id}
+    assert embeddings.requests == [["transfer"]]

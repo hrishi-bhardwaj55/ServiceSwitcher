@@ -91,6 +91,25 @@ class RegulationRetriever:
         text_results = self.store.text_candidates(validated, candidate_limit)
         return reciprocal_rank_fusion(vector_results, text_results, limit=limit)
 
+    def compare(
+        self,
+        query: str,
+        *,
+        limit: int = DEFAULT_LIMIT,
+        candidate_limit: int = DEFAULT_CANDIDATE_LIMIT,
+    ) -> tuple[list[SearchResult], list[SearchResult]]:
+        """Run both strategies with one shared query embedding."""
+        validated = _validate_query(query)
+        vector = self.embeddings.embed([validated])[0]
+        vector_results = self.store.vector_candidates(vector, candidate_limit)
+        text_results = self.store.text_candidates(validated, candidate_limit)
+        hybrid_results = reciprocal_rank_fusion(
+            vector_results,
+            text_results,
+            limit=limit,
+        )
+        return vector_results[:limit], hybrid_results
+
 
 def reciprocal_rank_fusion(
     vector_results: list[SearchResult],
