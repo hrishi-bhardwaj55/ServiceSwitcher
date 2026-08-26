@@ -8,7 +8,8 @@ is merged to `main`.
 |---|---|---|
 | C0 — domain model | Complete | Hand-computable escrow and payment examples documented; tag `c0-done` |
 | C1 — repository skeleton | Complete | Full local verification passed; four Compose services healthy; tag `c1-done` |
-| C2–C16 | Not started | Mandatory chunk order preserved |
+| C2 — synthetic account generator | Complete | Deterministic generation and independent validation pass for 300/300 accounts; property and mutation tests pass; tag `c2-done` |
+| C3–C16 | Not started | Mandatory chunk order preserved |
 
 ## Durable decisions
 
@@ -21,3 +22,10 @@ is merged to `main`.
 - The database container is pinned to PostgreSQL 16 with pgvector 0.8.6.
 - C1 health tests do not require PostgreSQL; service process health and dependency
   readiness remain separate concepts.
+- Canonical monetary JSON fields are decimal strings. This preserves exact cents
+  across Python `Decimal`, future Java `BigDecimal`, and generated artifacts.
+- The C2 corpus uses a fixed seed and atomic per-file replacement. Re-running the
+  generator is byte-stable and removes only stale `account-*.json` generator output.
+- Clean accounts include an explicit zero-dollar transfer marker. The old- and
+  new-servicer analyses use the same marker balance, making transfer continuity
+  directly testable without inventing an off-ledger opening balance.

@@ -4,8 +4,9 @@ ServicerSwitch is a demoable mortgage-servicing transfer auditor. It combines a
 deterministic financial reconciliation engine with a tool-using AI investigator,
 and requires document-level evidence for every AI-assisted claim.
 
-> Status: C1 complete — all three service shells, local orchestration, tests, and
-> CI are present. See the [implementation ledger](docs/progress.md).
+> Status: C2 complete — the service foundation and a validated 300-account
+> synthetic mortgage corpus are present. See the
+> [implementation ledger](docs/progress.md).
 
 ## Project principles
 
@@ -20,6 +21,7 @@ and requires document-level evidence for every AI-assisted claim.
 
 - [Build specification](servicerswitch_v1_spec.md)
 - [Mortgage and escrow domain model](docs/domain-model.md)
+- [Synthetic account generation](docs/synthetic-data.md)
 - [Implementation progress](docs/progress.md)
 
 ## Services
@@ -67,3 +69,16 @@ make verify
 On Windows PowerShell, activate with `.\.venv\Scripts\Activate.ps1` and run
 `make PYTHON=.venv/Scripts/python.exe verify` when GNU Make is available. The same
 verification gate runs on every push and pull request.
+
+## Synthetic accounts
+
+Generate the deterministic 300-account corpus and independently validate every
+financial invariant:
+
+```bash
+make generate-accounts
+make validate-accounts
+```
+
+The generated JSON is written to `data/accounts/` and intentionally ignored by Git.
+The default seed is stable, so repeated generation produces byte-identical files.
