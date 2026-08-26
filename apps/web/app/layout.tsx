@@ -4,8 +4,9 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ServicerSwitch",
-  description: "Evidence-backed mortgage servicing transfer audits",
+  title: "ServicerSwitch — evidence-led mortgage transfer audits",
+  description:
+    "Trace mortgage payment changes to deterministic calculations and highlighted source pages.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

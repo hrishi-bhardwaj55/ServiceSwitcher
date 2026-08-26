@@ -21,7 +21,8 @@ is merged to `main`.
 | C12 — agent evaluation | Complete | 300/300 exact finding sets, 0/100 clean false positives, 40.00% automated success, 55.00% faulted-case tool accuracy, 13/13 tool-error recovery, and zero model errors; tag `c12-done` |
 | C13 — naive baseline | Complete | 300/300 one-call cases without execution failures: 25.95% F1, 16.67% exact-set success, 75.00% clean FPR, and 87.50% tricky FPR; tag `c13-done` |
 | C14 — adversarial suite | Complete | 20/20 recorded behaviors passed; 8/8 unsafe documents rejected pre-model; 0/12 prompt-injection success; zero execution errors; tag `c14-done` |
-| C15–C16 | Not started | Mandatory chunk order preserved |
+| C15 — web UI | Complete | Four-screen responsive demo, highlighted source-PDF evidence, 4 component/flow tests, 1 Playwright path, and manual desktop/phone browser review; tag `c15-done` |
+| C16 — ship | Not started | Mandatory chunk order preserved |
 
 ## Durable decisions
 
@@ -139,3 +140,9 @@ is merged to `main`.
 - The fixed 20-PDF C14 corpus is reproducibly rendered from its JSONL manifest. The
   canonical model run preserved trusted extraction in all 12 injection cases and
   rejected the other eight cases without a model call.
+- The C15 demo renders page images generated directly from the synthetic source
+  PDFs and positions highlights with normalized extractor-style bounding boxes. The
+  linked original PDF remains available beside every page image.
+- Bring-your-own PDFs remain in browser memory only. C15 validates file type, size,
+  and count client-side and clearly labels the measured synthetic audit when custom
+  files are selected; it does not imply that a custom account was reconciled.

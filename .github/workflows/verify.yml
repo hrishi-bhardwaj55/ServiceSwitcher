@@ -44,6 +44,10 @@ jobs:
       - name: Install web dependencies
         run: npm ci --prefix apps/web
 
+      - name: Install Playwright browser
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+
       - name: Validate Compose configuration
         run: docker compose config --quiet
 

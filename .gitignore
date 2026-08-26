@@ -19,6 +19,8 @@ apps/web/node_modules/
 apps/web/.next/
 apps/web/coverage/
 apps/web/*.tsbuildinfo
+apps/web/playwright-report/
+apps/web/test-results/
 
 # Generated runtime data
 data/accounts/*.json
