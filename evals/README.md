@@ -31,3 +31,17 @@ To evaluate an already running engine instead, use:
 ```bash
 python -m evals.runners.engine_eval --engine-url http://127.0.0.1:8080
 ```
+
+## Deterministic extraction baseline
+
+`evals/runners/deterministic_extraction_eval.py` evaluates keyword classification
+and label-proximity extraction separately for Families A and B. It reports overall
+and per-field accuracy plus page/bounding-box provenance coverage:
+
+```bash
+make eval-extraction-deterministic
+```
+
+The current 1,200-document, 4,080-field result is recorded in
+`evals/reports/extraction_deterministic.md`. The runner excludes the held-out
+template set; that comparison begins only with the fallback evaluation chunk.
