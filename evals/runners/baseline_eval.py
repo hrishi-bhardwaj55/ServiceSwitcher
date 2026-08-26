@@ -25,7 +25,7 @@ from app.schemas.ground_truth import GroundTruthCase
 from app.schemas.mortgage import CanonicalModel
 from app.tools.engine import EngineFinding
 from dotenv import load_dotenv
-from pydantic import Field
+from pydantic import Field, ValidationError
 
 from evals.runners.agent_eval import load_ground_truth
 
@@ -33,9 +33,9 @@ DEFAULT_API_BASE = "https://api.openai.com/v1"
 DEFAULT_MODEL = "gpt-5.4-mini"
 DEFAULT_TIMEOUT_SECONDS = 90
 DEFAULT_TRANSPORT_ATTEMPTS = 3
-MAX_OUTPUT_TOKENS = 2_000
+MAX_OUTPUT_TOKENS = 8_000
 EXPECTED_CASE_COUNT = 300
-PROMPT_VERSION = "c13-naive-v1"
+PROMPT_VERSION = "c13-naive-v2"
 JsonObject = dict[str, object]
 Transport = Callable[[str, Mapping[str, str], JsonObject, int], Mapping[str, object]]
 
@@ -210,10 +210,8 @@ class CachedBaselineClient:
         return decision
 
     def _key(self, request: BaselineRequest) -> str:
-        material = (
-            f"{self.delegate.api_base}|{self.delegate.model}|{PROMPT_VERSION}\0"
-            f"{request.model_dump_json()}"
-        ).encode()
+        payload = json.dumps(self.delegate._payload(request), sort_keys=True)
+        material = f"{self.delegate.api_base}|{PROMPT_VERSION}\0{payload}".encode()
         return hashlib.sha256(material).hexdigest()
 
     def _load(self) -> dict[str, BaselineDecision]:
@@ -363,7 +361,7 @@ def run_case(
             predicted_findings=frozenset(),
             cost_usd=Decimal(0),
             latency_seconds=Decimal(0),
-            execution_error=type(error).__name__,
+            execution_error=_error_label(error),
         )
 
 
@@ -573,6 +571,14 @@ def _ratio(numerator: int, denominator: int) -> Decimal:
     if denominator == 0:
         return Decimal(1)
     return Decimal(numerator) / Decimal(denominator)
+
+
+def _error_label(error: Exception) -> str:
+    if isinstance(error, ValidationError):
+        issue = error.errors(include_input=False)[0]
+        location = ".".join(str(part) for part in issue["loc"]) or "root"
+        return f"ValidationError:{issue['type']}@{location}"[:160]
+    return type(error).__name__
 
 
 def _nearest_rank(values: Sequence[Decimal], percentile: Decimal) -> Decimal:

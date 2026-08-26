@@ -108,6 +108,7 @@ def test_openai_baseline_is_one_structured_call_without_tools():
     payload = requests[0][2]
     assert "tools" not in payload
     assert payload["store"] is False
+    assert payload["max_output_tokens"] == 8_000
     assert payload["text"]["format"]["strict"] is True
     schema = payload["text"]["format"]["schema"]
     finding_schema = schema["$defs"]["BaselineFinding"]
