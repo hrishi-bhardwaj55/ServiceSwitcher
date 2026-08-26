@@ -22,7 +22,7 @@ is merged to `main`.
 | C13 — naive baseline | Complete | 300/300 one-call cases without execution failures: 25.95% F1, 16.67% exact-set success, 75.00% clean FPR, and 87.50% tricky FPR; tag `c13-done` |
 | C14 — adversarial suite | Complete | 20/20 recorded behaviors passed; 8/8 unsafe documents rejected pre-model; 0/12 prompt-injection success; zero execution errors; tag `c14-done` |
 | C15 — web UI | Complete | Four-screen responsive demo, highlighted source-PDF evidence, 4 component/flow tests, 1 Playwright path, and manual desktop/phone browser review; tag `c15-done` |
-| C16 — ship | Not started | Mandatory chunk order preserved |
+| C16 — ship | Complete | Numbers-first README, architecture/eval docs, 990-word writeup, 180.92-second 720p demo, provider-free 47-vector seed, four healthy services, and full release gate; tag `v1.0.0` |
 
 ## Durable decisions
 
@@ -146,3 +146,15 @@ is merged to `main`.
 - Bring-your-own PDFs remain in browser memory only. C15 validates file type, size,
   and count client-side and clearly labels the measured synthetic audit when custom
   files are selected; it does not imply that a custom account was reconciled.
+- C16 makes Ruff plus mypy, Spotless plus Checkstyle, and ESLint plus TypeScript part
+  of the no-provider merge gate. Provider, extraction, and graph types were tightened
+  until all 47 Python application modules passed mypy without file-level exclusions.
+- `make demo` migrates PostgreSQL and seeds the 47 measured C9 vectors from a
+  checked-in artifact whose IDs, dimensions, and finite values are validated. Demo
+  startup sends no corpus text to a provider and incurs no embedding charge.
+- The production web container copies Next.js `public/` assets explicitly, and its
+  health check requires both the root page and the evidence-page PNG. Video frame
+  inspection caught this packaging gap before release.
+- The release video is a reproducible 1280×720 WebM walkthrough measured at 180.92
+  seconds. A timed narration/caption script is checked in separately; the video is
+  silent because the available local speech runtime could not reliably render audio.

@@ -7,6 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "lint": "eslint . --max-warnings=0",
+    "record:demo": "node scripts/record-demo.mjs",
     "start": "next start",
     "test": "vitest run",
     "test:e2e": "playwright test",

@@ -6,3 +6,5 @@ mvnw text eol=lf
 *.cmd text eol=crlf
 *.pdf binary
 *.png binary
+*.mp4 binary
+*.webm binary
