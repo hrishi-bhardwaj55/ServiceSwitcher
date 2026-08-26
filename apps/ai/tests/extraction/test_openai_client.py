@@ -61,6 +61,7 @@ def test_openai_client_uses_structured_output_and_untrusted_delimiters():
     assert captured["url"].endswith("/responses")
     assert captured["headers"]["Authorization"] == "Bearer test-key"
     assert captured["payload"]["store"] is False
+    assert client.cache_namespace.endswith("|test-model|c14-untrusted-v1")
     output_format = captured["payload"]["text"]["format"]
     assert output_format["type"] == "json_schema"
     assert output_format["strict"] is True

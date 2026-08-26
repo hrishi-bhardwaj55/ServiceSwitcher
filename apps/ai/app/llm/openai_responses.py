@@ -17,6 +17,7 @@ from app.security import wrap_untrusted_json
 DEFAULT_API_BASE = "https://api.openai.com/v1"
 DEFAULT_TIMEOUT_SECONDS = 60
 DEFAULT_RESPONSE_ATTEMPTS = 3
+PROMPT_VERSION = "c14-untrusted-v1"
 JsonObject = dict[str, Any]
 Transport = Callable[[str, Mapping[str, str], JsonObject, int], Mapping[str, Any]]
 
@@ -64,6 +65,10 @@ class OpenAIResponsesClient:
             model=model,
             api_base=os.getenv("LLM_API_BASE", DEFAULT_API_BASE),
         )
+
+    @property
+    def cache_namespace(self) -> str:
+        return f"{self.api_base}|{self.model}|{PROMPT_VERSION}"
 
     def extract(self, request: LLMExtractionRequest) -> LLMExtractionResponse:
         payload = {
