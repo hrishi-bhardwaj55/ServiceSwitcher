@@ -14,7 +14,8 @@ is merged to `main`.
 | C5 — first eval number | Complete | 100% precision/recall/F1, 0/100 clean false positives, and $0.0000 impact MAE across 300 HTTP reconciliations; tag `c5-done` |
 | C6 — document rendering | Complete | 1,500/1,500 PDFs pass page-count and extractable-value validation; exact A/B/C split is 120/120/60; tag `c6-done` |
 | C7 — deterministic extraction | Complete | A and B each score 100% classification, field accuracy, and provenance coverage across 1,200 PDFs and 4,080 fields; tag `c7-done` |
-| C8–C16 | Not started | Mandatory chunk order preserved |
+| C8 — LLM fallback and extraction eval | Complete | Real `gpt-5.4-mini` run: A/B 100% classification/fields/pages with 0% fallback; held-out C 100% classification, 93.04% fields, 78.14% pages, 100% fallback; tag `c8-done` |
+| C9–C16 | Not started | Mandatory chunk order preserved |
 
 ## Durable decisions
 
@@ -67,3 +68,16 @@ is merged to `main`.
   box, source text, and bounded confidence.
 - The development-set accuracy floors are recorded in tests at 99% classification
   and 98% fields; both layouts currently score 100%, with 100% provenance coverage.
+- Model fallback has separate 0.80 classification and 0.90 field thresholds. It is
+  never called for a high-confidence deterministic result, and it receives only
+  requested field names plus page-delimited untrusted text.
+- Deterministic/model disagreement is not silently resolved: both alternatives are
+  retained, confidence is capped at 0.49, and the unified field requires review.
+- Fake-provider runs test behavior but are not reported as model accuracy. The C8
+  headline numbers come from a credentialed `gpt-5.4-mini` run over all 1,500 PDFs.
+- Provider responses are cached by model, prompt-contract version, and complete
+  request hash under ignored `data/traces/` storage. A reproduced run used 300 cache
+  hits and zero provider calls while yielding the same reports.
+- Held-out high-confidence fields averaged 98.22% stated confidence but achieved
+  93.22% exact accuracy. That overconfidence, plus 78.14% page-citation accuracy, is
+  retained as an honest limitation rather than tuned against the held-out layout.

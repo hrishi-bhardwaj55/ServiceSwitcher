@@ -1,6 +1,6 @@
 PYTHON ?= python3
 
-.PHONY: up down verify lint-ai test-engine test-ai test-extraction test-data test-faults test-render test-evals test-web generate-accounts validate-accounts inject-faults validate-ground-truth eval-engine render-documents validate-documents check-heldout-isolation eval-extraction-deterministic
+.PHONY: up down verify lint-ai test-engine test-ai test-extraction test-data test-faults test-render test-evals test-web generate-accounts validate-accounts inject-faults validate-ground-truth eval-engine render-documents validate-documents check-heldout-isolation eval-extraction-deterministic eval-extraction
 
 up:
 	docker compose up --build -d
@@ -18,10 +18,10 @@ test-engine:
 	cd apps/engine && ./mvnw -B -ntp test
 
 test-ai:
-	$(PYTHON) -W error -m pytest -p no:cacheprovider apps/ai
+	$(PYTHON) -W error -m pytest -p no:cacheprovider -m "not llm" apps/ai
 
 test-extraction:
-	$(PYTHON) -W error -m pytest -p no:cacheprovider apps/ai/tests/extraction
+	$(PYTHON) -W error -m pytest -p no:cacheprovider -m "not llm" apps/ai/tests/extraction
 
 generate-accounts:
 	$(PYTHON) -m data.generator.generate --output data/accounts --count 300 --seed 20250825
@@ -62,6 +62,9 @@ check-heldout-isolation:
 
 eval-extraction-deterministic: validate-documents test-extraction
 	$(PYTHON) -m evals.runners.deterministic_extraction_eval --accounts data/accounts --documents data/documents
+
+eval-extraction: validate-documents test-extraction
+	$(PYTHON) -m evals.runners.extraction_eval --accounts data/accounts --documents data/documents
 
 test-web:
 	npm --prefix apps/web run typecheck
