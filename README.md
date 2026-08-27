@@ -120,7 +120,7 @@ scenario; its timed narration/caption script is in
 
 CI and `make verify` run the no-provider release gate:
 
-- Ruff and mypy over the Python service, plus 128 non-LLM service tests;
+- Ruff and mypy over the Python service, plus 129 non-LLM service tests;
 - Spotless, Checkstyle, and 16 JUnit tests for the Java engine;
 - ESLint, TypeScript, 4 component/flow tests, a production Next.js build, and one
   Playwright browser journey;

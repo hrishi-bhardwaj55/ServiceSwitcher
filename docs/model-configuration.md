@@ -11,6 +11,9 @@ The investigator uses those values for its preflight and measured cost guards. S
 the official [`gpt-5-nano` model page](https://developers.openai.com/api/docs/models/gpt-5-nano)
 for current pricing, availability, and limits.
 
+The investigator requests `reasoning.effort=minimal`, the lowest effort accepted by
+this model. Its tool and resolution responses remain schema-validated in Python.
+
 ## Local configuration
 
 Keep credentials only in the ignored repository-root `.env` file:
