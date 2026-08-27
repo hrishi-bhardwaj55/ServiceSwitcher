@@ -12,7 +12,7 @@ from urllib.request import Request, urlopen
 from pydantic import ValidationError
 
 from app.llm.models import LLMExtractionRequest, LLMExtractionResponse
-from app.security import wrap_untrusted_json
+from app.security import authorization_headers, wrap_untrusted_json
 
 DEFAULT_API_BASE = "https://api.openai.com/v1"
 DEFAULT_TIMEOUT_SECONDS = 60
@@ -102,10 +102,7 @@ class OpenAIResponsesClient:
         try:
             response = self.transport(
                 f"{self.api_base}/responses",
-                {
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json",
-                },
+                authorization_headers(self.api_key),
                 payload,
                 self.timeout,
             )

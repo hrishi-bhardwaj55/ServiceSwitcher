@@ -23,7 +23,7 @@ from app.agents.cli import document_refs
 from app.agents.investigator import ModelUsage
 from app.schemas.ground_truth import GroundTruthCase
 from app.schemas.mortgage import CanonicalModel
-from app.security import MAX_DOCUMENT_MONEY, wrap_untrusted_json
+from app.security import MAX_DOCUMENT_MONEY, authorization_headers, wrap_untrusted_json
 from app.tools.engine import EngineFinding
 from dotenv import load_dotenv
 from pydantic import Field, ValidationError
@@ -144,10 +144,7 @@ class OpenAIBaselineClient:
             try:
                 response = self.transport(
                     f"{self.api_base}/responses",
-                    {
-                        "Authorization": f"Bearer {self.api_key}",
-                        "Content-Type": "application/json",
-                    },
+                    authorization_headers(self.api_key),
                     payload,
                     self.timeout,
                 )

@@ -17,7 +17,7 @@ from pydantic import Field, model_validator
 
 from app.retrieval import RuleChunk
 from app.schemas.mortgage import CanonicalModel
-from app.security import wrap_untrusted_json
+from app.security import authorization_headers, wrap_untrusted_json
 from app.tools import ScopedAgentTool
 from app.tools.engine import EngineFinding
 
@@ -222,10 +222,7 @@ class OpenAIInvestigatorModel:
             try:
                 response = self.transport(
                     f"{self.api_base}/responses",
-                    {
-                        "Authorization": f"Bearer {self.api_key}",
-                        "Content-Type": "application/json",
-                    },
+                    authorization_headers(self.api_key),
                     self._payload(request, tools),
                     self.timeout,
                 )
@@ -278,7 +275,7 @@ class OpenAIInvestigatorModel:
             "tool_choice": "required",
             "parallel_tool_calls": False,
             "max_output_tokens": MAX_OUTPUT_TOKENS,
-            "reasoning": {"effort": "none"},
+            "reasoning": {"effort": "minimal"},
             "store": False,
             "safety_identifier": hashlib.sha256(request.audit_id.encode()).hexdigest()[:32],
         }

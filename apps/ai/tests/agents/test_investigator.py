@@ -103,6 +103,7 @@ def test_openai_investigator_parses_one_tool_call_and_builds_bounded_payload():
     payload = requests[0][2]
     assert payload["parallel_tool_calls"] is False
     assert payload["max_output_tokens"] == 600
+    assert payload["reasoning"] == {"effort": "minimal"}
     assert payload["store"] is False
     assert payload["tools"][-1]["name"] == "resolve_finding"
     assert '<UNTRUSTED_AUDIT_CONTEXT encoding="json">' in payload["input"]

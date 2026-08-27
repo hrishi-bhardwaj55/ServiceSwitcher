@@ -10,6 +10,8 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from app.security import authorization_headers
+
 DEFAULT_API_BASE = "https://api.openai.com/v1"
 DEFAULT_MODEL = "text-embedding-3-small"
 DEFAULT_DIMENSIONS = 512
@@ -67,10 +69,7 @@ class OpenAIEmbeddingClient:
         try:
             response = self.transport(
                 f"{self.api_base}/embeddings",
-                {
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json",
-                },
+                authorization_headers(self.api_key),
                 payload,
                 self.timeout,
             )
