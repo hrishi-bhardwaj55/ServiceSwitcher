@@ -27,6 +27,12 @@ used. Cost columns are not whole-system parity: system cost covers investigator
 tokens, while baseline cost covers its single full-document call. See the
 [evaluation methodology](docs/evals.md) before interpreting the numbers.
 
+These published `v1.0.0` measurements used `gpt-5.4-mini`. The current runtime
+defaults to the lower-cost `gpt-5-nano`; the historical quality and cost numbers must
+not be attributed to nano until the credentialed evaluations are rerun. See
+[model configuration](docs/model-configuration.md) for the pricing boundary and
+upgrade notes.
+
 ## The 30-second explanation
 
 ServicerSwitch audits a synthetic mortgage-servicing transfer. A Python service
@@ -47,7 +53,7 @@ provider API key. Ports `3000`, `5432`, `8000`, and `8080` must be available.
 git clone https://github.com/hrishi-bhardwaj55/ServiceSwitcher.git
 cd ServiceSwitcher
 cp .env.example .env
-# Set LLM_API_KEY in .env; keep LLM_MODEL=gpt-5.4-mini
+# Set LLM_API_KEY in .env; keep LLM_MODEL=gpt-5-nano
 make demo
 ```
 
@@ -173,6 +179,7 @@ to generated reports are in [docs/evals.md](docs/evals.md).
 - [Deterministic reconciliation engine](docs/reconciliation-engine.md)
 - [Document rendering and extraction](docs/document-rendering.md)
 - [Model-backed extraction fallback](docs/llm-extraction-fallback.md)
+- [Model configuration and evaluation provenance](docs/model-configuration.md)
 - [Agent tools and investigator graph](docs/agent-tools.md)
 - [Adversarial security boundary](docs/adversarial-security.md)
 - [Implementation ledger](docs/progress.md)

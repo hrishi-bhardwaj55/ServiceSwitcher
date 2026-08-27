@@ -26,7 +26,11 @@ uses exact decimal values. Extraction scores typed field equality and one-based 
 citations. Retrieval uses one required chunk per query and reports Recall@5,
 Precision@5, and MRR. No evaluation uses an LLM judge.
 
-Real-provider evaluations use one configured tier, `gpt-5.4-mini`, and run serially.
+The published `v1.0.0` real-provider evaluations used one configured tier,
+`gpt-5.4-mini`, and ran serially. The current runtime default is `gpt-5-nano`; no
+historical metric in this document should be read as a nano result. Check out the
+`v1.0.0` tag to reproduce the original model boundary, or rerun the current
+credentialed evaluations to establish a new nano comparison.
 Requests are cached by model, prompt-contract version, and complete payload hash so a
 failed run can resume without changing the measured input. Fake clients test behavior
 but never contribute to provider-accuracy claims. The no-provider `make verify` gate

@@ -57,15 +57,15 @@ shared configuration is:
 
 ```dotenv
 LLM_API_KEY=your-key
-LLM_MODEL=gpt-5.4-mini
+LLM_MODEL=gpt-5-nano
 LLM_API_BASE=https://api.openai.com/v1
 ```
 
 Optional `AGENT_API_KEY`, `AGENT_MODEL`, and `AGENT_API_BASE` values override the
 shared settings. `EMBEDDING_API_KEY` may override the key used to ingest and query
-the regulation corpus. The default agent model is `gpt-5.4-mini`; the code rejects
+the regulation corpus. The default agent model is `gpt-5-nano`; the code rejects
 other model families because its token-cost enforcement uses that model's published
-pricing. See the official [model page](https://developers.openai.com/api/docs/models/gpt-5.4-mini)
+pricing. See the official [model page](https://developers.openai.com/api/docs/models/gpt-5-nano)
 and [Responses API reference](https://developers.openai.com/api/reference/resources/responses/methods/create).
 
 ## Running and verifying
@@ -93,8 +93,9 @@ step count.
 The regression suite covers the happy path, a no-finding branch, tool-error
 recovery, a 12-call stop, cost preflight rejection, resolution-before-evidence,
 unsupported model explanations, supported structured explanations, repeated-call
-non-progress, trajectory bounds, and checkpointed human-review resume. A live
-CASE-0042 run preserved the engine's `PROPERTY_TAX_PROJECTION_MISMATCH` with exact
+non-progress, trajectory bounds, and checkpointed human-review resume. A historical
+`gpt-5.4-mini` CASE-0042 run preserved the engine's
+`PROPERTY_TAX_PROJECTION_MISMATCH` with exact
 $613.17 total and $51.10 monthly impact; a repeated comparison was stopped at two
 steps and routed to review instead of allowing the model to discard the finding.
 
