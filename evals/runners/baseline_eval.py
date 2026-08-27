@@ -31,7 +31,7 @@ from pydantic import Field, ValidationError
 from evals.runners.agent_eval import load_ground_truth
 
 DEFAULT_API_BASE = "https://api.openai.com/v1"
-DEFAULT_MODEL = "gpt-5.4-mini"
+DEFAULT_MODEL = "gpt-5-nano"
 DEFAULT_TIMEOUT_SECONDS = 90
 DEFAULT_TRANSPORT_ATTEMPTS = 3
 MAX_OUTPUT_TOKENS = 8_000
@@ -112,8 +112,8 @@ class OpenAIBaselineClient:
     ) -> None:
         if not api_key:
             raise ValueError("api_key is required")
-        if not model.startswith("gpt-5.4-mini"):
-            raise ValueError("baseline pricing is configured only for gpt-5.4-mini")
+        if not model.startswith(DEFAULT_MODEL):
+            raise ValueError(f"baseline pricing is configured only for {DEFAULT_MODEL}")
         if transport_attempts < 1:
             raise ValueError("transport_attempts must be at least one")
         self.api_key = api_key

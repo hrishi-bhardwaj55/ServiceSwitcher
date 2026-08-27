@@ -22,13 +22,14 @@ from app.tools import ScopedAgentTool
 from app.tools.engine import EngineFinding
 
 DEFAULT_API_BASE = "https://api.openai.com/v1"
-DEFAULT_MODEL = "gpt-5.4-mini"
+DEFAULT_MODEL = "gpt-5-nano"
+SUPPORTED_MODEL_PREFIX = "gpt-5-nano"
 MAX_OUTPUT_TOKENS = 600
 DEFAULT_TRANSPORT_ATTEMPTS = 3
 DEFAULT_RETRY_DELAY_SECONDS = 0.25
-INPUT_PER_MILLION_USD = Decimal("0.75")
-CACHED_INPUT_PER_MILLION_USD = Decimal("0.075")
-OUTPUT_PER_MILLION_USD = Decimal("4.50")
+INPUT_PER_MILLION_USD = Decimal("0.05")
+CACHED_INPUT_PER_MILLION_USD = Decimal("0.005")
+OUTPUT_PER_MILLION_USD = Decimal("0.40")
 MILLION = Decimal("1000000")
 JsonObject = dict[str, object]
 Transport = Callable[[str, Mapping[str, str], JsonObject, int], Mapping[str, object]]
@@ -171,8 +172,8 @@ class OpenAIInvestigatorModel:
     ) -> None:
         if not api_key:
             raise ValueError("api_key is required")
-        if not model.startswith("gpt-5.4-mini"):
-            raise ValueError("agent pricing is configured only for gpt-5.4-mini")
+        if not model.startswith(SUPPORTED_MODEL_PREFIX):
+            raise ValueError(f"agent pricing is configured only for {SUPPORTED_MODEL_PREFIX}")
         if transport_attempts < 1:
             raise ValueError("transport_attempts must be at least one")
         if retry_delay_seconds < 0:

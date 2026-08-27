@@ -275,7 +275,7 @@ def test_graph_happy_path_runs_required_nodes_and_preserves_finding(tmp_path):
     ]
     assert result["requires_review"] is False
     assert result["steps_used"] == 1
-    assert result["cost_usd"] == Decimal("0.000240")
+    assert result["cost_usd"] == Decimal("0.000018")
     assert engine.calls == [("SS-TEST", "2024-06-01")]
     assert len(regulations.calls) == 1
     assert set(model.tool_names[0]) == {
